@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2 } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -11,15 +11,84 @@ import { integrationStatusLabel } from "@/data/app";
 import { useIntegrations, useMessages, useWorkspace } from "@/lib/data";
 import { askEmployee, runSkill } from "@/lib/ai.functions";
 import { SkillPalette } from "@/components/app/SkillPalette";
+import { Thinking } from "@/components/app/Thinking";
 import { Markdown } from "@/components/app/Markdown";
 import { PublishPanel } from "@/components/app/PublishPanel";
 import { PublishToWordPress } from "@/components/app/PublishToWordPress";
 import { ActionPanel } from "@/components/app/ActionPanel";
 import { Portrait } from "@/components/site/Portrait";
 
-
-import { skillsFor, type Skill } from "@/data/skills";
+import { featuredSkillsFor, skillsFor, type Skill } from "@/data/skills";
 import { cn } from "@/lib/utils";
+
+/** اقتراحات بداية سريعة لكل موظف — تُرسل كرسالة مباشرة. */
+const STARTERS: Record<string, string[]> = {
+  nour: [
+    "اقترح 10 عناوين مقالات لمتجري",
+    "اكتب وصف ميتا لصفحة خدماتي",
+    "ما أهم 5 كلمات مفتاحية في مجالي؟",
+  ],
+  sonny: [
+    "اكتب 3 أفكار منشورات لهذا الأسبوع",
+    "منشور إطلاق منتج جديد بلهجة مصرية",
+    "اقترح هاشتاقات لمقهى في الرياض",
+  ],
+  eva: [
+    "رد على عميل يشتكي من تأخر الشحن",
+    "صِغ رسالة ترحيب للعملاء الجدد",
+    "رتّب لي أولويات بريد اليوم",
+  ],
+  sam: [
+    "اكتب رسالة متابعة لعميل لم يرد",
+    "حلّل هذا العرض واقترح تحسينه",
+    "ما أفضل وقت للمتابعة مع العملاء؟",
+  ],
+  dana: [
+    "صمّم فكرة بوست لعرض الجمعة البيضاء",
+    "اقترح لوحة ألوان لعلامتي",
+    "فكرة غلاف لحساب إنستجرام",
+  ],
+  adam: [
+    "لخّص أداء الأسبوع الماضي",
+    "ما المقياس الأهم لمتجري الآن؟",
+    "جهّز تقريراً شهرياً مختصراً",
+  ],
+};
+
+/** يقسّم الرسائل حسب اليوم لعرض فواصل تاريخ أنيقة. */
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return "اليوم";
+  if (same(d, yesterday)) return "أمس";
+  return d.toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1600);
+        } catch {
+          /* تجاهل */
+        }
+      }}
+      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      aria-label="نسخ الرد"
+    >
+      {done ? <Check className="size-3 text-jade" /> : <Copy className="size-3" />}
+      {done ? "نُسخ" : "نسخ"}
+    </button>
+  );
+}
 
 /** يقرّر إن كان رد سِراج منشوراً قابلاً للنشر (لا سؤالاً ولا شرحاً قصيراً). */
 function looksPostable(body: string): boolean {
@@ -91,7 +160,6 @@ function prettyBody(body: string): string {
 }
 
 function timeOf(iso: string) {
-
   return new Date(iso).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -114,12 +182,14 @@ function ChatPage() {
   const ask = useServerFn(askEmployee);
   const runSkillFn = useServerFn(runSkill);
   const employeeSkills = skillsFor(id);
+  const quickSkills = featuredSkillsFor(id).slice(0, 6);
+  /** آخر رسالة فشل إرسالها — لزر «أعد المحاولة». */
+  const [pendingText, setPendingText] = useState<string | null>(null);
 
   const owned = (integrations ?? []).filter((i) => i.employee_id === id);
   const wpConnected = (integrations ?? []).some(
     (i) => i.provider === "wordpress" && i.status === "connected",
   );
-
 
   const send = useMutation({
     mutationFn: (message: string) =>
@@ -127,15 +197,16 @@ function ChatPage() {
     onSuccess: async (res) => {
       await qc.invalidateQueries({ queryKey: ["messages", workspace?.id, id] });
       setPending(null);
+      setPendingText(null);
       setSavedTask(Boolean(res?.createdTaskId));
       void qc.invalidateQueries({ queryKey: ["messages-last", workspace?.id] });
       void qc.invalidateQueries({ queryKey: ["tasks", workspace?.id] });
     },
-    onError: (e: unknown) => {
+    onError: (e: unknown, message) => {
       setPending(null);
+      setPendingText(message);
       setError(e instanceof Error ? e.message : "تعذّر إرسال الطلب");
     },
-
   });
 
   const skillRun = useMutation({
@@ -156,7 +227,6 @@ function ChatPage() {
     },
     onError: (e: unknown) => setError(e instanceof Error ? e.message : "تعذّر تنفيذ المهمة"),
   });
-
 
   const busy = send.isPending || skillRun.isPending;
 
@@ -187,7 +257,6 @@ function ChatPage() {
     send.mutate(body);
   };
 
-
   return (
     <AppShell
       title={member.name}
@@ -206,95 +275,139 @@ function ChatPage() {
         </button>
       }
     >
-      <div className="grid lg:grid-cols-[1fr_20rem]">
-        <div className="flex min-h-[calc(100vh-5.5rem)] flex-col">
-          <div className="flex-1 space-y-4 px-5 py-6">
-            {(messages ?? []).length === 0 ? (
-              <div className="rounded-3xl border border-border bg-card p-8 text-center">
-                <span className="relative mx-auto block size-16 overflow-hidden rounded-3xl shadow-card">
-                  <Portrait memberId={member.id} name={member.name} className="size-full" />
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="relative flex min-h-[calc(100dvh-5.3rem)] min-w-0 flex-col">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_9%,transparent),transparent)]"
+          />
+          <div className="relative mx-auto w-full max-w-4xl flex-1 space-y-4 px-5 py-6">
+            {(messages ?? []).length === 0 && !pending ? (
+              <div className="animate-pop-in rounded-3xl border border-border bg-card p-8 text-center shadow-card">
+                <span className="relative mx-auto block size-20 rounded-3xl">
+                  <span className="absolute inset-0 rounded-3xl animate-pulse-ring" />
+                  <span className="relative block size-full overflow-hidden rounded-3xl shadow-card">
+                    <Portrait memberId={member.id} name={member.name} className="size-full" eager />
+                  </span>
                 </span>
-                <p className="mt-4 font-bold">{member.tagline}</p>
-                <p className="mt-1 text-sm text-ink-soft">اكتب طلبك بالأسفل وسأبدأ فوراً.</p>
+                <p className="mt-4 font-display text-xl font-black">أهلاً، أنا {member.name}</p>
+                <p className="mt-1 text-sm text-ink-soft">{member.tagline}</p>
+                <p className="mt-5 text-[0.7rem] font-bold tracking-wide text-muted-foreground">
+                  ابدأ بواحدة من هذه
+                </p>
+                <div className="mt-2.5 flex flex-wrap justify-center gap-2">
+                  {(STARTERS[id] ?? []).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => submit(s)}
+                      disabled={!workspace || busy}
+                      className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-card disabled:opacity-50"
+                    >
+                      {s}
+                      <ArrowUpLeft className="size-3.5 text-primary opacity-0 transition-all group-hover:opacity-100" />
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-5 text-xs text-muted-foreground">
+                  أو اضغط «كل القدرات» بالأسفل لتنفيذ مهمة كاملة بنموذج جاهز.
+                </p>
               </div>
             ) : null}
 
-            {(messages ?? []).map((m) => (
-              <div
-                key={m.id}
-                className={cn("flex gap-3", m.role === "user" ? "justify-start" : "justify-end")}
-              >
-                {m.role !== "user" ? (
-                  <span className="relative order-2 block size-9 shrink-0 overflow-hidden rounded-xl shadow-sm">
-                    <Portrait memberId={member.id} name={member.name} className="size-full" />
-                  </span>
-                ) : null}
-                <div
-                  className={cn(
-                    "min-w-0 max-w-[min(46rem,88%)] rounded-3xl px-5 py-3.5 leading-relaxed",
-                    m.role === "user"
-                      ? "rounded-ss-lg bg-foreground text-background whitespace-pre-wrap"
-                      : "order-1 rounded-se-lg border border-border bg-card shadow-sm",
-                  )}
-                >
-                  {m.role === "user" ? <p dir="auto">{m.body}</p> : <Markdown body={prettyBody(m.body)} />}
-                  {m.role !== "user" &&
-                  id === "nour" &&
-                  workspace &&
-                  wpConnected &&
-                  m.body.length > 200 ? (
-                    <PublishToWordPress workspaceId={workspace.id} body={m.body} />
+            {(messages ?? []).map((m, idx, arr) => {
+              const prev = arr[idx - 1];
+              const newDay = !prev || dayLabel(prev.created_at) !== dayLabel(m.created_at);
+              const isUser = m.role === "user";
+              const body = isUser ? m.body : prettyBody(m.body);
+              return (
+                <div key={m.id} className="space-y-4">
+                  {newDay ? (
+                    <div className="flex items-center gap-3 py-1 text-[0.7rem] font-bold text-muted-foreground">
+                      <span className="h-px flex-1 bg-border" />
+                      {dayLabel(m.created_at)}
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
                   ) : null}
-                  {m.role !== "user" && id === "sonny" && workspace && looksPostable(m.body) ? (
-                    <PublishPanel
-                      workspaceId={workspace.id}
-                      employeeId="sonny"
-                      channel="instagram"
-                      body={m.body}
-                    />
-                  ) : null}
-
-                  <p
+                  <div
                     className={cn(
-                      "mt-1.5 text-[0.7rem]",
-                      m.role === "user" ? "text-background/60" : "text-muted-foreground",
+                      "group flex gap-3 animate-bubble-in",
+                      isUser ? "justify-start" : "justify-end",
                     )}
                   >
-                    {timeOf(m.created_at)}
-                  </p>
+                    {!isUser ? (
+                      <span className="relative order-2 mt-1 block size-9 shrink-0 overflow-hidden rounded-xl shadow-sm">
+                        <Portrait memberId={member.id} name={member.name} className="size-full" />
+                      </span>
+                    ) : null}
+                    <div
+                      className={cn(
+                        "min-w-0 max-w-[min(46rem,88%)] rounded-3xl px-5 py-3.5 leading-relaxed",
+                        isUser
+                          ? "bubble-user rounded-ss-lg text-background whitespace-pre-wrap shadow-card"
+                          : "order-1 rounded-se-lg border border-border bg-card shadow-sm",
+                      )}
+                    >
+                      {isUser ? <p dir="auto">{m.body}</p> : <Markdown body={body} />}
+                      {!isUser &&
+                      id === "nour" &&
+                      workspace &&
+                      wpConnected &&
+                      m.body.length > 200 ? (
+                        <PublishToWordPress workspaceId={workspace.id} body={m.body} />
+                      ) : null}
+                      {!isUser && id === "sonny" && workspace && looksPostable(m.body) ? (
+                        <PublishPanel
+                          workspaceId={workspace.id}
+                          employeeId="sonny"
+                          channel="instagram"
+                          body={m.body}
+                        />
+                      ) : null}
+
+                      <div
+                        className={cn(
+                          "mt-1.5 flex items-center gap-2 text-[0.7rem]",
+                          isUser ? "text-background/60" : "text-muted-foreground",
+                        )}
+                      >
+                        <span>{timeOf(m.created_at)}</span>
+                        {!isUser ? (
+                          <span className="ms-auto opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                            <CopyButton text={body} />
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {pending ? (
-              <div className="flex justify-start gap-3">
-                <div className="min-w-0 max-w-[min(46rem,88%)] rounded-3xl rounded-ss-lg bg-foreground px-5 py-3.5 leading-relaxed text-background opacity-80">
+              <div className="flex justify-start gap-3 animate-bubble-in">
+                <div className="bubble-user min-w-0 max-w-[min(46rem,88%)] rounded-3xl rounded-ss-lg px-5 py-3.5 leading-relaxed text-background shadow-card">
                   <p dir="auto" className="whitespace-pre-wrap">
                     {pending}
                   </p>
                   <p className="mt-1.5 flex items-center gap-1.5 text-[0.7rem] text-background/60">
-                    <Loader2 className="size-3 animate-spin" /> جارٍ الإرسال…
+                    <Check className="size-3" /> وصل إلى {member.name}
                   </p>
                 </div>
               </div>
             ) : null}
 
-            {busy ? (
-
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span className="relative block size-9 shrink-0 overflow-hidden rounded-xl">
-                  <Portrait memberId={member.id} name={member.name} className="size-full" />
-                </span>
-                <Loader2 className="size-4 animate-spin" /> {member.name} يعمل على طلبك…
-              </div>
-            ) : null}
+            {busy ? <Thinking memberId={member.id} name={member.name} /> : null}
 
             {savedTask && !busy ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-jade/12 px-4 py-3 text-sm font-semibold text-jade-deep">
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-jade/25 bg-jade/10 px-4 py-3 text-sm font-semibold text-jade-deep animate-pop-in">
+                <span className="grid size-7 place-items-center rounded-full bg-jade text-background">
+                  <Check className="size-3.5" strokeWidth={3} />
+                </span>
                 تم حفظ المخرج في «الموافقات» بانتظار اعتمادك.
                 <Link
                   to="/app/approvals"
-                  className="rounded-full bg-jade-deep px-4 py-1.5 text-xs font-bold text-background"
+                  className="ms-auto rounded-full bg-jade-deep px-4 py-1.5 text-xs font-bold text-background transition-transform hover:-translate-y-0.5"
                 >
                   افتح الموافقات
                 </Link>
@@ -302,9 +415,18 @@ function ChatPage() {
             ) : null}
 
             {error ? (
-              <p className="rounded-2xl bg-coral/12 px-4 py-3 text-sm font-semibold text-coral">
-                {error}
-              </p>
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-coral/25 bg-coral/10 px-4 py-3 text-sm font-semibold text-coral animate-pop-in">
+                <span className="flex-1">{error}</span>
+                {pendingText ? (
+                  <button
+                    type="button"
+                    onClick={() => submit(pendingText)}
+                    className="rounded-full bg-coral px-4 py-1.5 text-xs font-bold text-background"
+                  >
+                    أعد المحاولة
+                  </button>
+                ) : null}
+              </div>
             ) : null}
 
             <div ref={endRef} />
@@ -316,7 +438,7 @@ function ChatPage() {
                 e.preventDefault();
                 submit(draft);
               }}
-              className="rounded-3xl border border-border bg-card p-2 shadow-sm transition-colors focus-within:border-primary"
+              className="mx-auto max-w-4xl rounded-3xl border border-border bg-card p-2 shadow-card transition-all focus-within:border-primary focus-within:shadow-lift focus-within:ring-4 focus-within:ring-primary/10"
             >
               <textarea
                 ref={inputRef}
@@ -329,13 +451,14 @@ function ChatPage() {
                     submit(draft);
                   }
                 }}
-                placeholder={`اكتب طلبك لـ${member.name}… (Enter للإرسال)`}
+                placeholder={`اكتب طلبك لـ${member.name}…`}
                 dir="auto"
-                className="max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 outline-none"
+                className="max-h-40 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 outline-none placeholder:text-muted-foreground/80"
               />
-              <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
+              <div className="flex items-center gap-2 px-1 pb-0.5">
                 <SkillPalette
                   skills={employeeSkills}
+                  quick={quickSkills}
                   disabled={!workspace}
                   pending={busy}
                   onRun={(skill, values) => {
@@ -346,7 +469,7 @@ function ChatPage() {
                 <button
                   type="submit"
                   disabled={busy || !workspace || !draft.trim()}
-                  className="grid size-10 shrink-0 place-items-center rounded-2xl bg-foreground text-background transition-opacity disabled:opacity-40"
+                  className="grid size-10 shrink-0 place-items-center rounded-2xl bg-foreground text-background transition-all hover:-translate-y-0.5 hover:shadow-lift disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   aria-label="إرسال"
                 >
                   {busy ? (
@@ -356,13 +479,17 @@ function ChatPage() {
                   )}
                 </button>
               </div>
+              <p className="px-3 pb-1 pt-1.5 text-[0.65rem] text-muted-foreground">
+                Enter للإرسال · Shift+Enter لسطر جديد ·{" "}
+                <Sparkles className="inline size-3 text-primary" /> يقرأ من عقل علامتك
+              </p>
             </form>
           </div>
         </div>
 
         <aside
           className={cn(
-            "border-s border-border bg-card p-5",
+            "border-s border-border bg-card p-5 lg:sticky lg:top-[5.3rem] lg:h-[calc(100dvh-5.3rem)] lg:overflow-y-auto",
             showSettings ? "block" : "hidden lg:block",
           )}
         >
