@@ -172,6 +172,8 @@ function ChatPage() {
   const { data: workspace } = useWorkspace();
   const { data: messages } = useMessages(workspace?.id, id);
   const { data: integrations } = useIntegrations(workspace?.id);
+  const { data: brainItems } = useBrainItems(workspace?.id);
+  const hasVoiceGuide = (brainItems ?? []).some((b) => b.title === "دليل صوت العلامة");
   const { prompt: prefill } = Route.useSearch();
   const [draft, setDraft] = useState(prefill ?? "");
   useEffect(() => {
@@ -288,6 +290,26 @@ function ChatPage() {
             className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_9%,transparent),transparent)]"
           />
           <div className="relative mx-auto w-full max-w-4xl flex-1 space-y-4 px-5 py-6">
+            {brainItems && !hasVoiceGuide && ["sonny", "nour", "eva", "dana"].includes(id) ? (
+              <Link
+                to="/app/brain"
+                className="group flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
+              >
+                <span
+                  className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
+                  style={{ backgroundImage: "var(--gradient-aurora)" }}
+                >
+                  <Fingerprint className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">خلّي {member.name} يكتب بصوت علامتك بالضبط</span>
+                  <span className="block text-xs text-muted-foreground">
+                    الصق رابط موقعك مرة واحدة — نستخرج اللهجة والنبرة والمفردات ويلتزم بها الفريق كله. مجانًا.
+                  </span>
+                </span>
+                <ArrowUpLeft className="size-4 shrink-0 text-primary transition-transform group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" />
+              </Link>
+            ) : null}
             {(messages ?? []).length === 0 && !pending ? (
               <div className="animate-pop-in rounded-3xl border border-border bg-card p-8 text-center shadow-card">
                 <span className="relative mx-auto block size-20 rounded-3xl">

@@ -12,7 +12,10 @@ export const Route = createFileRoute("/app/reports")({
   head: () => ({
     meta: [
       { title: "تقارير السيو | سهل" },
-      { name: "description", content: "تقرير سيو قابل للطباعة من بيانات Search Console وGA4 الحقيقية." },
+      {
+        name: "description",
+        content: "تقرير سيو قابل للطباعة من بيانات Search Console وGA4 الحقيقية.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -121,8 +124,14 @@ function ReportsPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: "نقرات البحث", value: data.search ? num(data.search.totals.clicks) : "—" },
-              { label: "مرات الظهور", value: data.search ? num(data.search.totals.impressions) : "—" },
-              { label: "جلسات الموقع", value: data.analytics ? num(data.analytics.totals.sessions) : "—" },
+              {
+                label: "مرات الظهور",
+                value: data.search ? num(data.search.totals.impressions) : "—",
+              },
+              {
+                label: "جلسات الموقع",
+                value: data.analytics ? num(data.analytics.totals.sessions) : "—",
+              },
               { label: "مخرجات جاهزة", value: num(data.work.published + data.work.awaiting) },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-border p-4">
