@@ -276,7 +276,7 @@ function ChatPage() {
       }
     >
       <div className="grid lg:grid-cols-[1fr_20rem]">
-        <div className="relative flex min-h-[calc(100vh-5.5rem)] flex-col">
+        <div className="relative flex min-h-[calc(100dvh-5.3rem)] flex-col">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_9%,transparent),transparent)]"
@@ -489,7 +489,7 @@ function ChatPage() {
 
         <aside
           className={cn(
-            "border-s border-border bg-card p-5",
+            "border-s border-border bg-card p-5 lg:sticky lg:top-[5.3rem] lg:h-[calc(100dvh-5.3rem)] lg:overflow-y-auto",
             showSettings ? "block" : "hidden lg:block",
           )}
         >
