@@ -160,7 +160,7 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
             <Link
               to="/app/chat/$id"
               params={{ id: "nour" }}
-              search={{ prompt: nourPrompt } as never}
+              search={{ prompt: nourPrompt }}
               className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-primary-foreground"
               style={{ backgroundImage: "var(--gradient-aurora)" }}
             >
