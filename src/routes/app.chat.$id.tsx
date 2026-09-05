@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2 } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -11,15 +11,60 @@ import { integrationStatusLabel } from "@/data/app";
 import { useIntegrations, useMessages, useWorkspace } from "@/lib/data";
 import { askEmployee, runSkill } from "@/lib/ai.functions";
 import { SkillPalette } from "@/components/app/SkillPalette";
+import { Thinking } from "@/components/app/Thinking";
 import { Markdown } from "@/components/app/Markdown";
 import { PublishPanel } from "@/components/app/PublishPanel";
 import { PublishToWordPress } from "@/components/app/PublishToWordPress";
 import { ActionPanel } from "@/components/app/ActionPanel";
 import { Portrait } from "@/components/site/Portrait";
 
-
-import { skillsFor, type Skill } from "@/data/skills";
+import { featuredSkillsFor, skillsFor, type Skill } from "@/data/skills";
 import { cn } from "@/lib/utils";
+
+/** اقتراحات بداية سريعة لكل موظف — تُرسل كرسالة مباشرة. */
+const STARTERS: Record<string, string[]> = {
+  nour: ["اقترح 10 عناوين مقالات لمتجري", "اكتب وصف ميتا لصفحة خدماتي", "ما أهم 5 كلمات مفتاحية في مجالي؟"],
+  sonny: ["اكتب 3 أفكار منشورات لهذا الأسبوع", "منشور إطلاق منتج جديد بلهجة مصرية", "اقترح هاشتاقات لمقهى في الرياض"],
+  eva: ["رد على عميل يشتكي من تأخر الشحن", "صِغ رسالة ترحيب للعملاء الجدد", "رتّب لي أولويات بريد اليوم"],
+  sam: ["اكتب رسالة متابعة لعميل لم يرد", "حلّل هذا العرض واقترح تحسينه", "ما أفضل وقت للمتابعة مع العملاء؟"],
+  dana: ["صمّم فكرة بوست لعرض الجمعة البيضاء", "اقترح لوحة ألوان لعلامتي", "فكرة غلاف لحساب إنستجرام"],
+  adam: ["لخّص أداء الأسبوع الماضي", "ما المقياس الأهم لمتجري الآن؟", "جهّز تقريراً شهرياً مختصراً"],
+};
+
+/** يقسّم الرسائل حسب اليوم لعرض فواصل تاريخ أنيقة. */
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return "اليوم";
+  if (same(d, yesterday)) return "أمس";
+  return d.toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1600);
+        } catch {
+          /* تجاهل */
+        }
+      }}
+      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      aria-label="نسخ الرد"
+    >
+      {done ? <Check className="size-3 text-jade" /> : <Copy className="size-3" />}
+      {done ? "نُسخ" : "نسخ"}
+    </button>
+  );
+}
 
 /** يقرّر إن كان رد سِراج منشوراً قابلاً للنشر (لا سؤالاً ولا شرحاً قصيراً). */
 function looksPostable(body: string): boolean {
