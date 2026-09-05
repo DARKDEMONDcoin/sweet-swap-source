@@ -78,7 +78,7 @@ export const extractBrandVoice = createServerFn({ method: "POST" })
           title: "دليل صوت العلامة",
           meta: `قاعدة نبرة إلزامية · استُخرج ${urls.length ? `من ${urls.length} صفحات` : "من عينات نصية"} · ${new Date().toLocaleDateString("ar-EG")}`,
           body: rule,
-          used_by: ["nour", "sonny", "dana", "amal", "sam", "lina"],
+          used_by: ["sonny", "eva", "sam", "nour", "dana", "adam"],
         })
         .select("id")
         .single();
