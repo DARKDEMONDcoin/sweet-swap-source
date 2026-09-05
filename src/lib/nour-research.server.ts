@@ -138,10 +138,12 @@ async function callOpenAICompatible(
       // بدون هذا يستهلك gemini-3.6-flash دقائق في "التفكير" ويقطع الرد.
       reasoning_effort: "low",
       ...(options.json ? { response_format: { type: "json_object" } } : {}),
-      max_tokens: options.maxTokens ?? 1800,
+      ...(isGpt5(model) ? {} : { max_tokens: options.maxTokens ?? 1800 }),
       messages,
     }),
-    signal: AbortSignal.timeout(options.timeoutMs ?? 30_000),
+    signal: AbortSignal.timeout(
+      isGpt5(model) ? Math.max(options.timeoutMs ?? 0, 90_000) : (options.timeoutMs ?? 30_000),
+    ),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
