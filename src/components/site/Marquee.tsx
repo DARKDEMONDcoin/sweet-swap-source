@@ -1,14 +1,18 @@
+import { AppIcon, appLabel } from "@/components/site/AppIcon";
+
 const platforms = [
-  "إنستجرام",
-  "لينكدإن",
-  "فيسبوك",
-  "X",
-  "تيك توك",
-  "يوتيوب",
-  "بينترست",
-  "واتساب بيزنس",
-  "جيميل",
-  "سلاك",
+  "instagram",
+  "linkedin",
+  "facebook",
+  "x",
+  "tiktok",
+  "youtube",
+  "pinterest",
+  "whatsapp",
+  "gmail",
+  "slack",
+  "shopify",
+  "notion",
 ];
 
 export function Marquee() {
@@ -23,9 +27,10 @@ export function Marquee() {
           {row.map((p, i) => (
             <span
               key={`${p}-${i}`}
-              className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-bold whitespace-nowrap text-ink-soft shadow-card"
+              className="inline-flex items-center gap-2.5 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-bold whitespace-nowrap text-ink-soft shadow-card"
             >
-              {p}
+              <AppIcon name={p} className="size-4.5" />
+              {appLabel(p)}
             </span>
           ))}
         </div>

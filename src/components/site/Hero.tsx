@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Image as ImageIcon, Send, Star } from "lucide-react";
 import { Reveal } from "@/components/Reveal";
 
@@ -62,13 +63,13 @@ export function Hero() {
           </Reveal>
 
           <Reveal delay={80}>
-            <h1 className="mt-6 font-display text-[2.6rem] leading-[1.15] font-black text-white drop-shadow-sm md:text-6xl">
-              وظّف فريق ذكاء اصطناعي
-              <br />
-              <span className="relative inline-block h-[1.25em] overflow-hidden align-bottom">
+            <h1 className="mt-6 font-display text-[2.5rem] leading-[1.18] font-black text-white drop-shadow-sm md:text-[3.4rem] lg:text-[3.75rem]">
+              <span className="block whitespace-nowrap">وظّف فريق ذكاء اصطناعي</span>
+              <span className="relative mt-1 block h-[1.3em] overflow-hidden text-amber [text-shadow:0_2px_24px_oklch(0.7_0.125_79_/_0.35)]">
                 {rotating.map((w, idx) => (
                   <span
                     key={w}
+                    aria-hidden={idx !== i}
                     className="absolute inset-x-0 whitespace-nowrap transition-all duration-600 ease-out"
                     style={{
                       transform: `translateY(${(idx - i) * 100}%)`,
@@ -92,13 +93,14 @@ export function Hero() {
 
           <Reveal delay={240}>
             <div className="mt-9 flex flex-wrap items-center gap-3">
-              <a
-                href="#cta"
+              <Link
+                to="/auth"
+                search={{ mode: "signup" as const }}
                 className="group inline-flex items-center gap-2 rounded-full bg-background px-7 py-3.5 font-bold text-foreground shadow-lift transition-transform duration-300 hover:-translate-y-1"
               >
                 جرّب مجاناً — بدون بطاقة
                 <ArrowLeft className="size-4.5 transition-transform duration-300 group-hover:-translate-x-1" />
-              </a>
+              </Link>
               <a
                 href="#employees"
                 className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/15 px-6 py-3.5 font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
@@ -109,11 +111,14 @@ export function Hero() {
           </Reveal>
 
           <Reveal delay={320}>
-            <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-2 text-sm font-medium text-white/85">
-              <span>✦ 7 منصات نشر</span>
-              <span>✦ صور بنص عربي سليم</span>
-              <span>✦ تصدير بياناتك في أي وقت</span>
-            </div>
+            <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-white/85">
+              {["إعداد في 8 دقائق", "7 منصات نشر", "صور بنص عربي سليم", "إلغاء في أي وقت"].map((t) => (
+                <li key={t} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-amber" strokeWidth={2.4} />
+                  {t}
+                </li>
+              ))}
+            </ul>
           </Reveal>
         </div>
 
@@ -126,7 +131,10 @@ export function Hero() {
                 <span className="size-2.5 rounded-full bg-amber" />
                 <span className="size-2.5 rounded-full bg-jade" />
               </div>
-              <span className="text-xs font-semibold text-muted-foreground">لوحة فريقك · مباشر</span>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-jade animate-pulse" />
+                لوحة فريقك · مباشر
+              </span>
             </div>
 
             <div className="grid grid-cols-3 gap-3 py-4">
