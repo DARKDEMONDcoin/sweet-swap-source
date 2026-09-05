@@ -1,5 +1,5 @@
 import { useRegion } from "@/hooks/use-region";
-import { portraitOf, REGIONS, REGION_FLAGS, REGION_LABELS } from "@/data/team-portraits";
+import { portraitOf, REGIONS, REGION_LABELS } from "@/data/team-portraits";
 import { cn } from "@/lib/utils";
 
 type PortraitProps = {
@@ -53,7 +53,6 @@ export function RegionPicker({ className }: { className?: string }) {
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <span className="ml-1.5">{REGION_FLAGS[r]}</span>
           {REGION_LABELS[r]}
         </button>
       ))}

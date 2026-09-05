@@ -18,6 +18,9 @@ export function Pricing() {
             <h2 className="mt-3 font-display text-4xl font-black md:text-5xl">
               أرخص من راتب متدرّب
             </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+              ابدأ مجاناً وارتقِ وقت ما تحتاج. بدون عقود، وبدون رسوم مخفية.
+            </p>
             <div className="mt-7 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1">
               {[
                 { l: "سنوي · وفّر 20%", v: true },

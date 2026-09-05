@@ -8,7 +8,7 @@ import { Features } from "@/components/site/Features";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { Testimonials } from "@/components/site/Testimonials";
 import { Pricing } from "@/components/site/Pricing";
-import { Faq } from "@/components/site/Faq";
+import { Faq, faqs } from "@/components/site/Faq";
 import { CtaFooter } from "@/components/site/CtaFooter";
 import { SiteFooter } from "@/components/site/SiteFooter";
 
@@ -55,6 +55,14 @@ export const Route = createFileRoute("/")({
                 priceCurrency: "SAR",
                 description: "باقة البداية — موظف رقمي واحد",
               },
+            },
+            {
+              "@type": "FAQPage",
+              mainEntity: faqs.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
             },
           ],
         }),

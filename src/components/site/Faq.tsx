@@ -6,7 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-const faqs = [
+export const faqs = [
   {
     q: "هل المحتوى مترجم من الإنجليزي؟",
     a: "لا. النماذج تُوجَّه بالعربية مباشرة مع أمثلة من سوقك ولهجتك، وتراجع المخرجات على قواعد لغوية عربية قبل النشر — بما في ذلك النص داخل الصور.",
@@ -33,7 +33,11 @@ export function Faq() {
   return (
     <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-5 py-24">
       <Reveal>
-        <h2 className="text-center font-display text-4xl font-black md:text-5xl">أسئلة متكررة</h2>
+        <p className="text-center text-sm font-bold tracking-wider text-primary">الأسئلة الشائعة</p>
+        <h2 className="mt-3 text-center font-display text-4xl font-black md:text-5xl">أسئلة متكررة</h2>
+        <p className="mx-auto mt-4 max-w-md text-center text-muted-foreground">
+          لم تجد إجابتك؟ راسلنا وسيردّ عليك إنسان حقيقي خلال يوم عمل.
+        </p>
       </Reveal>
       <Reveal delay={80}>
         <Accordion type="single" collapsible className="mt-10">
