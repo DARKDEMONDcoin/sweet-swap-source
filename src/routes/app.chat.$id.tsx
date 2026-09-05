@@ -175,15 +175,16 @@ function ChatPage() {
     onSuccess: async (res) => {
       await qc.invalidateQueries({ queryKey: ["messages", workspace?.id, id] });
       setPending(null);
+      setPendingText(null);
       setSavedTask(Boolean(res?.createdTaskId));
       void qc.invalidateQueries({ queryKey: ["messages-last", workspace?.id] });
       void qc.invalidateQueries({ queryKey: ["tasks", workspace?.id] });
     },
-    onError: (e: unknown) => {
+    onError: (e: unknown, message) => {
       setPending(null);
+      setPendingText(message);
       setError(e instanceof Error ? e.message : "تعذّر إرسال الطلب");
     },
-
   });
 
   const skillRun = useMutation({
