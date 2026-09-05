@@ -1,79 +1,85 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { REGIONS, type Region } from "@/data/team-portraits";
+import { COUNTRIES, DEFAULT_COUNTRY, countryOf, type Country, type Region } from "@/data/team-portraits";
 
-const STORAGE_KEY = "sahl.region";
+const STORAGE_KEY = "sahl.country";
 
-/** خرائط المناطق الزمنية لكل بلد عربي → الزي الإقليمي الأقرب. */
-const ZONE_REGION: Record<string, Region> = {
-  "Asia/Riyadh": "gulf",
-  "Asia/Kuwait": "gulf",
-  "Asia/Qatar": "gulf",
-  "Asia/Bahrain": "gulf",
-  "Asia/Dubai": "gulf",
-  "Asia/Muscat": "gulf",
-  "Asia/Aden": "gulf",
-  "Africa/Cairo": "eg",
-  "Africa/Khartoum": "eg",
-  "Asia/Amman": "sham",
-  "Asia/Beirut": "sham",
-  "Asia/Damascus": "sham",
-  "Asia/Jerusalem": "sham",
-  "Asia/Hebron": "sham",
-  "Asia/Gaza": "sham",
-  "Asia/Baghdad": "sham",
-  "Africa/Casablanca": "maghreb",
-  "Africa/El_Aaiun": "maghreb",
-  "Africa/Algiers": "maghreb",
-  "Africa/Tunis": "maghreb",
-  "Africa/Tripoli": "maghreb",
-  "Africa/Nouakchott": "maghreb",
-};
-
-function detectRegion(): Region {
+/** يكتشف بلد الزائر من المنطقة الزمنية ثم من لغة المتصفح. */
+function detectCountry(): string {
   try {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (zone && ZONE_REGION[zone]) return ZONE_REGION[zone];
-    const lang = navigator.language?.toLowerCase() ?? "";
-    if (lang.includes("-eg") || lang.includes("-sd")) return "eg";
-    if (/-(jo|lb|sy|ps|iq)$/.test(lang)) return "sham";
-    if (/-(ma|dz|tn|ly|mr)$/.test(lang)) return "maghreb";
+    if (zone) {
+      const byZone = COUNTRIES.find((c) => c.zones.includes(zone));
+      if (byZone) return byZone.code;
+    }
+    const langs = [navigator.language, ...(navigator.languages ?? [])].filter(Boolean);
+    for (const l of langs) {
+      const m = /-([a-z]{2})$/i.exec(l ?? "");
+      if (m) {
+        const code = m[1]!.toUpperCase();
+        if (COUNTRIES.some((c) => c.code === code)) return code;
+      }
+    }
   } catch {
     /* تجاهل */
   }
-  return "gulf";
+  return DEFAULT_COUNTRY;
 }
 
-type Ctx = { region: Region; setRegion: (r: Region) => void; auto: boolean };
+type Ctx = {
+  /** رمز الدولة المختارة (مثل EG). */
+  country: string;
+  countryInfo: Country;
+  /** طقم الزي المرتبط بالدولة. */
+  region: Region;
+  setCountry: (code: string) => void;
+  /** هل الاختيار تلقائي (لم يغيّره الزائر بنفسه)؟ */
+  auto: boolean;
+};
 
-const RegionContext = createContext<Ctx>({ region: "gulf", setRegion: () => {}, auto: true });
+const RegionContext = createContext<Ctx>({
+  country: DEFAULT_COUNTRY,
+  countryInfo: countryOf(DEFAULT_COUNTRY),
+  region: countryOf(DEFAULT_COUNTRY).attire,
+  setCountry: () => {},
+  auto: true,
+});
 
 export function RegionProvider({ children }: { children: React.ReactNode }) {
-  // نبدأ دائماً بالخليج حتى يتطابق الخادم مع المتصفح، ثم نكتشف البلد بعد التحميل.
-  const [region, setRegionState] = useState<Region>("gulf");
+  // نبدأ دائماً بمصر حتى يتطابق الخادم مع المتصفح، ثم نكتشف البلد بعد التحميل.
+  const [country, setCountryState] = useState<string>(DEFAULT_COUNTRY);
   const [auto, setAuto] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as Region | null;
-    if (saved && (REGIONS as readonly string[]).includes(saved)) {
-      setRegionState(saved);
-      setAuto(false);
-      return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && COUNTRIES.some((c) => c.code === saved)) {
+        setCountryState(saved);
+        setAuto(false);
+        return;
+      }
+    } catch {
+      /* تجاهل */
     }
-    setRegionState(detectRegion());
+    setCountryState(detectCountry());
   }, []);
 
-  const setRegion = useCallback((r: Region) => {
-    setRegionState(r);
+  const setCountry = useCallback((code: string) => {
+    if (!COUNTRIES.some((c) => c.code === code)) return;
+    setCountryState(code);
     setAuto(false);
     try {
-      localStorage.setItem(STORAGE_KEY, r);
+      localStorage.setItem(STORAGE_KEY, code);
     } catch {
       /* تجاهل */
     }
   }, []);
 
-  const value = useMemo(() => ({ region, setRegion, auto }), [region, setRegion, auto]);
+  const value = useMemo<Ctx>(() => {
+    const info = countryOf(country);
+    return { country, countryInfo: info, region: info.attire, setCountry, auto };
+  }, [country, setCountry, auto]);
+
   return <RegionContext.Provider value={value}>{children}</RegionContext.Provider>;
 }
 

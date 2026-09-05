@@ -106,7 +106,7 @@ function MemberPage() {
           </div>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/90">{m.summary}</p>
           <div className="mt-6">
-            <RegionPicker className="border-white/25 bg-white/10" />
+            <RegionPicker className="border-white/25 bg-white/15 text-white" />
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

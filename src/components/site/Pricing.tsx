@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { Reveal } from "@/components/Reveal";
-import { plans, priceOf } from "@/data/pricing";
+import { plans, priceOf, currencyOf } from "@/data/pricing";
+import { useRegion } from "@/hooks/use-region";
 import { cn } from "@/lib/utils";
 
 
 export function Pricing() {
   const [yearly, setYearly] = useState(true);
+  const { country, countryInfo } = useRegion();
+  const cur = currencyOf(country);
 
   return (
     <section id="pricing" className="scroll-mt-24 border-y border-border bg-secondary/40 py-24">
@@ -20,6 +23,9 @@ export function Pricing() {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
               ابدأ مجاناً وارتقِ وقت ما تحتاج. بدون عقود، وبدون رسوم مخفية.
+            </p>
+            <p className="mt-2 text-xs font-semibold text-muted-foreground">
+              الأسعار معروضة بعملة {countryInfo.name} ({cur.code}) تقريبياً — وتُحاسب بالريال السعودي أو الدولار.
             </p>
             <div className="mt-7 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1">
               {[
@@ -45,7 +51,7 @@ export function Pricing() {
 
         <div className="mt-12 grid items-start gap-5 md:grid-cols-3">
           {plans.map((p, i) => {
-            const price = priceOf(p, yearly);
+            const price = priceOf(p, yearly, country);
             return (
               <Reveal key={p.name} delay={i * 90}>
                 <article
@@ -92,7 +98,7 @@ export function Pricing() {
                         p.highlight ? "text-background/70" : "text-muted-foreground",
                       )}
                     >
-                      {p.monthly === null ? "" : "ر.س / شهرياً"}
+                      {p.monthly === null ? "" : `${cur.label} / شهرياً`}
                     </span>
                   </div>
 

@@ -54,17 +54,17 @@ export function Hero() {
       />
 
       <div className="relative mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div>
+        <div className="min-w-0">
           <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/25 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/25 px-4 py-1.5 text-xs font-semibold sm:text-sm text-white backdrop-blur">
               <span className="size-2 rounded-full bg-white animate-pulse-ring" />
-              أول فريق ذكاء اصطناعي يفكّر ويكتب بالعربي
+              أول منصة موظفين بالذكاء الاصطناعي لمصر والوطن العربي
             </span>
           </Reveal>
 
           <Reveal delay={80}>
-            <h1 className="mt-6 font-display text-[2.5rem] leading-[1.18] font-black text-white drop-shadow-sm md:text-[3.4rem] lg:text-[3.75rem]">
-              <span className="block whitespace-nowrap">وظّف فريق ذكاء اصطناعي</span>
+            <h1 className="mt-6 font-display text-[2rem] leading-[1.2] sm:text-[2.6rem] font-black text-white drop-shadow-sm md:text-[3.4rem] lg:text-[3.75rem]">
+              <span className="block md:whitespace-nowrap">وظّف فريق ذكاء اصطناعي</span>
               <span className="relative mt-1 block h-[1.3em] overflow-hidden text-amber [text-shadow:0_2px_24px_oklch(0.7_0.125_79_/_0.35)]">
                 {rotating.map((w, idx) => (
                   <span
