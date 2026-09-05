@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 
-/** Reveals an element on first scroll into view (Stripe-style staged entrance). */
+/**
+ * Reveals an element on first scroll into view (Stripe-style staged entrance).
+ * Content is visible in the server HTML (SEO + no blank page before hydration);
+ * only elements below the fold are hidden after mount and revealed on scroll.
+ */
 export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.15) {
   const ref = useRef<T | null>(null);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(true);
+  const armed = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || shown) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setShown(true);
-      return;
-    }
-    // Anything already inside the first viewport shows immediately (hero, nav badge…)
+    if (!el || armed.current) return;
+    armed.current = true;
+    if (typeof IntersectionObserver === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    // Anything already inside the first viewport stays visible (hero, badge…)
     const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
-      setShown(true);
-      return;
-    }
+    if (rect.top < window.innerHeight && rect.bottom > 0) return;
+
+    setShown(false);
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -30,13 +34,8 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.
       { threshold, rootMargin: "0px 0px -8% 0px" },
     );
     io.observe(el);
-    // Safety net: never leave content invisible if the observer never fires.
-    const fallback = window.setTimeout(() => setShown(true), 2500);
-    return () => {
-      io.disconnect();
-      window.clearTimeout(fallback);
-    };
-  }, [shown, threshold]);
+    return () => io.disconnect();
+  }, [threshold]);
 
   return { ref, shown };
 }
