@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Sparkles } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { guestSession } from "@/lib/guest.functions";
