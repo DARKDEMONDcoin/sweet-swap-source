@@ -56,7 +56,7 @@ export function Hero() {
       <div className="relative mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="min-w-0">
           <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/25 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/25 px-4 py-1.5 text-xs font-semibold sm:text-sm text-white backdrop-blur">
               <span className="size-2 rounded-full bg-white animate-pulse-ring" />
               أول منصة موظفين بالذكاء الاصطناعي لمصر والوطن العربي
             </span>
