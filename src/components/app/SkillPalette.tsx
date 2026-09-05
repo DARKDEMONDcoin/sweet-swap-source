@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   BarChart3,
@@ -150,239 +151,260 @@ export function SkillPalette({ skills, disabled, pending, onRun, quick, hideQuic
         ) : null}
       </div>
 
-      {browsing ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-end bg-foreground/45 p-0 backdrop-blur-sm animate-fade-in sm:place-items-center sm:p-4"
-          onClick={() => setBrowsing(false)}
-          role="dialog"
-          aria-modal
-          aria-label="مستعرض القدرات"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-lift animate-pop-in sm:rounded-3xl"
-          >
-            <div className="border-b border-border p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-display text-lg font-black">القدرات</p>
-                  <p className="text-xs text-muted-foreground">
-                    {skills.length} قدرة جاهزة — اختر واحدة، املأ حقلين، واستلم مخرجاً كاملاً.
-                  </p>
-                </div>
-                <button
-                  type="button"
+      {typeof document !== "undefined" && (browsing || open)
+        ? createPortal(
+            <>
+              {browsing ? (
+                <div
+                  className="fixed inset-0 z-50 grid place-items-end bg-foreground/45 p-0 backdrop-blur-sm animate-fade-in sm:place-items-center sm:p-4"
                   onClick={() => setBrowsing(false)}
-                  className="grid size-9 shrink-0 place-items-center rounded-xl border border-border transition-colors hover:bg-secondary"
-                  aria-label="إغلاق"
+                  role="dialog"
+                  aria-modal
+                  aria-label="مستعرض القدرات"
                 >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <label className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-background px-3.5 py-2.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
-                <Search className="size-4 shrink-0 text-muted-foreground" />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="ابحث: مقال، هاشتاق، تقرير، رد على عميل…"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                />
-                {query ? (
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    className="text-xs font-bold text-muted-foreground hover:text-foreground"
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-lift animate-pop-in sm:rounded-3xl"
                   >
-                    مسح
-                  </button>
-                ) : (
-                  <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 text-[0.65rem] text-muted-foreground sm:block">
-                    Esc
-                  </kbd>
-                )}
-              </label>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              {groups.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="font-bold">لا نتائج مطابقة.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    جرّب كلمة أعم — أو اكتب طلبك مباشرة في المحادثة وسيتولاه الموظف.
-                  </p>
-                </div>
-              ) : null}
-              {groups.map(([category, list]) => {
-                const meta = categoryMeta(category);
-                return (
-                  <section key={category} className="mb-6 last:mb-0">
-                    <h3 className="mb-2.5 flex items-center gap-2 text-xs font-black">
-                      <span className={cn("grid size-6 place-items-center rounded-lg", meta.hue)}>
-                        <meta.icon className="size-3.5" strokeWidth={2.4} />
-                      </span>
-                      {category}
-                      <span className="text-muted-foreground">· {list.length}</span>
-                    </h3>
-                    <ul className="grid gap-2 sm:grid-cols-2">
-                      {list.map((s) => (
-                        <li key={s.id}>
+                    <div className="border-b border-border p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-display text-lg font-black">القدرات</p>
+                          <p className="text-xs text-muted-foreground">
+                            {skills.length} قدرة جاهزة — اختر واحدة، املأ حقلين، واستلم مخرجاً
+                            كاملاً.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setBrowsing(false)}
+                          className="grid size-9 shrink-0 place-items-center rounded-xl border border-border transition-colors hover:bg-secondary"
+                          aria-label="إغلاق"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                      <label className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-background px-3.5 py-2.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                        <Search className="size-4 shrink-0 text-muted-foreground" />
+                        <input
+                          autoFocus
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="ابحث: مقال، هاشتاق، تقرير، رد على عميل…"
+                          className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                        />
+                        {query ? (
                           <button
                             type="button"
-                            onClick={() => start(s)}
-                            className="group flex w-full items-start gap-3 rounded-2xl border border-border bg-background/60 p-3.5 text-start transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-card"
+                            onClick={() => setQuery("")}
+                            className="text-xs font-bold text-muted-foreground hover:text-foreground"
                           >
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-1.5 text-sm font-bold">
-                                {s.title}
-                                {s.featured ? (
-                                  <Star
-                                    className="size-3 fill-amber text-amber"
-                                    aria-label="مميّزة"
-                                  />
-                                ) : null}
-                              </span>
-                              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                                {s.summary}
-                              </span>
-                            </span>
-                            <ArrowLeft className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:-translate-x-0.5 group-hover:opacity-100" />
+                            مسح
                           </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-end bg-foreground/45 p-0 backdrop-blur-sm animate-fade-in sm:place-items-center sm:p-4"
-          onClick={() => setOpen(null)}
-          role="dialog"
-          aria-modal
-          aria-label={open.title}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-lift animate-pop-in sm:rounded-3xl"
-          >
-            <div className="flex items-start gap-3 border-b border-border p-5">
-              {(() => {
-                const meta = categoryMeta(open.category);
-                return (
-                  <span
-                    className={cn("grid size-11 shrink-0 place-items-center rounded-2xl", meta.hue)}
-                  >
-                    <meta.icon className="size-5" strokeWidth={2.2} />
-                  </span>
-                );
-              })()}
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.7rem] font-bold text-muted-foreground">{open.category}</p>
-                <h3 className="font-display text-xl font-black leading-tight">{open.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{open.summary}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(null)}
-                className="grid size-9 shrink-0 place-items-center rounded-xl border border-border transition-colors hover:bg-secondary"
-                aria-label="إغلاق"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <form
-              className="flex min-h-0 flex-1 flex-col"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!ready) return;
-                onRun(open, values);
-                setOpen(null);
-              }}
-            >
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-                {open.fields.map((f) => {
-                  const id = `skill-${open.id}-${f.name}`;
-                  const val = values[f.name] ?? "";
-                  const set = (v: string) => setValues((p) => ({ ...p, [f.name]: v }));
-                  return (
-                    <div key={f.name}>
-                      <label htmlFor={id} className="block text-sm font-bold">
-                        {f.label}
-                        {f.required ? <span className="text-primary"> *</span> : null}
+                        ) : (
+                          <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 text-[0.65rem] text-muted-foreground sm:block">
+                            Esc
+                          </kbd>
+                        )}
                       </label>
-                      {f.help ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{f.help}</p>
-                      ) : null}
-                      {f.type === "textarea" ? (
-                        <textarea
-                          id={id}
-                          rows={4}
-                          value={val}
-                          placeholder={f.placeholder}
-                          onChange={(e) => set(e.target.value)}
-                          className={inputCls}
-                        />
-                      ) : f.type === "select" ? (
-                        <select
-                          id={id}
-                          value={val}
-                          onChange={(e) => set(e.target.value)}
-                          className={inputCls}
-                        >
-                          {(f.options ?? []).map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          id={id}
-                          type={f.type === "number" ? "number" : "text"}
-                          value={val}
-                          placeholder={f.placeholder}
-                          onChange={(e) => set(e.target.value)}
-                          className={inputCls}
-                        />
-                      )}
                     </div>
-                  );
-                })}
-              </div>
 
-              <div className="border-t border-border p-4 sm:p-5">
-                <button
-                  type="submit"
-                  disabled={!ready || pending}
-                  className={cn(
-                    "flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-5 py-3 font-bold text-background transition-all hover:-translate-y-0.5 hover:shadow-lift",
-                    (!ready || pending) && "opacity-50 hover:translate-y-0 hover:shadow-none",
-                  )}
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+                      {groups.length === 0 ? (
+                        <div className="py-12 text-center">
+                          <p className="font-bold">لا نتائج مطابقة.</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            جرّب كلمة أعم — أو اكتب طلبك مباشرة في المحادثة وسيتولاه الموظف.
+                          </p>
+                        </div>
+                      ) : null}
+                      {groups.map(([category, list]) => {
+                        const meta = categoryMeta(category);
+                        return (
+                          <section key={category} className="mb-6 last:mb-0">
+                            <h3 className="mb-2.5 flex items-center gap-2 text-xs font-black">
+                              <span
+                                className={cn(
+                                  "grid size-6 place-items-center rounded-lg",
+                                  meta.hue,
+                                )}
+                              >
+                                <meta.icon className="size-3.5" strokeWidth={2.4} />
+                              </span>
+                              {category}
+                              <span className="text-muted-foreground">· {list.length}</span>
+                            </h3>
+                            <ul className="grid gap-2 sm:grid-cols-2">
+                              {list.map((s) => (
+                                <li key={s.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => start(s)}
+                                    className="group flex w-full items-start gap-3 rounded-2xl border border-border bg-background/60 p-3.5 text-start transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-card hover:shadow-card"
+                                  >
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex items-center gap-1.5 text-sm font-bold">
+                                        {s.title}
+                                        {s.featured ? (
+                                          <Star
+                                            className="size-3 fill-amber text-amber"
+                                            aria-label="مميّزة"
+                                          />
+                                        ) : null}
+                                      </span>
+                                      <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                                        {s.summary}
+                                      </span>
+                                    </span>
+                                    <ArrowLeft className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:-translate-x-0.5 group-hover:opacity-100" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {open ? (
+                <div
+                  className="fixed inset-0 z-50 grid place-items-end bg-foreground/45 p-0 backdrop-blur-sm animate-fade-in sm:place-items-center sm:p-4"
+                  onClick={() => setOpen(null)}
+                  role="dialog"
+                  aria-modal
+                  aria-label={open.title}
                 >
-                  {pending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="size-4" />
-                  )}
-                  نفّذ المهمة
-                </button>
-                {!ready && requiredCount > 0 ? (
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
-                    املأ الحقول المعلّمة بـ * للمتابعة.
-                  </p>
-                ) : null}
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-lift animate-pop-in sm:rounded-3xl"
+                  >
+                    <div className="flex items-start gap-3 border-b border-border p-5">
+                      {(() => {
+                        const meta = categoryMeta(open.category);
+                        return (
+                          <span
+                            className={cn(
+                              "grid size-11 shrink-0 place-items-center rounded-2xl",
+                              meta.hue,
+                            )}
+                          >
+                            <meta.icon className="size-5" strokeWidth={2.2} />
+                          </span>
+                        );
+                      })()}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[0.7rem] font-bold text-muted-foreground">
+                          {open.category}
+                        </p>
+                        <h3 className="font-display text-xl font-black leading-tight">
+                          {open.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{open.summary}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOpen(null)}
+                        className="grid size-9 shrink-0 place-items-center rounded-xl border border-border transition-colors hover:bg-secondary"
+                        aria-label="إغلاق"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+
+                    <form
+                      className="flex min-h-0 flex-1 flex-col"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!ready) return;
+                        onRun(open, values);
+                        setOpen(null);
+                      }}
+                    >
+                      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+                        {open.fields.map((f) => {
+                          const id = `skill-${open.id}-${f.name}`;
+                          const val = values[f.name] ?? "";
+                          const set = (v: string) => setValues((p) => ({ ...p, [f.name]: v }));
+                          return (
+                            <div key={f.name}>
+                              <label htmlFor={id} className="block text-sm font-bold">
+                                {f.label}
+                                {f.required ? <span className="text-primary"> *</span> : null}
+                              </label>
+                              {f.help ? (
+                                <p className="mt-0.5 text-xs text-muted-foreground">{f.help}</p>
+                              ) : null}
+                              {f.type === "textarea" ? (
+                                <textarea
+                                  id={id}
+                                  rows={4}
+                                  value={val}
+                                  placeholder={f.placeholder}
+                                  onChange={(e) => set(e.target.value)}
+                                  className={inputCls}
+                                />
+                              ) : f.type === "select" ? (
+                                <select
+                                  id={id}
+                                  value={val}
+                                  onChange={(e) => set(e.target.value)}
+                                  className={inputCls}
+                                >
+                                  {(f.options ?? []).map((o) => (
+                                    <option key={o} value={o}>
+                                      {o}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  id={id}
+                                  type={f.type === "number" ? "number" : "text"}
+                                  value={val}
+                                  placeholder={f.placeholder}
+                                  onChange={(e) => set(e.target.value)}
+                                  className={inputCls}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="border-t border-border p-4 sm:p-5">
+                        <button
+                          type="submit"
+                          disabled={!ready || pending}
+                          className={cn(
+                            "flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-5 py-3 font-bold text-background transition-all hover:-translate-y-0.5 hover:shadow-lift",
+                            (!ready || pending) &&
+                              "opacity-50 hover:translate-y-0 hover:shadow-none",
+                          )}
+                        >
+                          {pending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Wand2 className="size-4" />
+                          )}
+                          نفّذ المهمة
+                        </button>
+                        {!ready && requiredCount > 0 ? (
+                          <p className="mt-2 text-center text-xs text-muted-foreground">
+                            املأ الحقول المعلّمة بـ * للمتابعة.
+                          </p>
+                        ) : null}
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              ) : null}
+            </>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
