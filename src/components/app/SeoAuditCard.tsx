@@ -152,7 +152,7 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
                 </>
               ) : (
                 <p className="max-w-[12rem]">
-                  لم تتوفر قياسات Lighthouse الآن — أعد المحاولة بعد قليل.
+                  قياس السرعة المجاني من جوجل مشغول الآن — تحليل الصفحة أعلاه كامل، وأعد المحاولة لاحقًا للسرعة.
                 </p>
               )}
             </div>
