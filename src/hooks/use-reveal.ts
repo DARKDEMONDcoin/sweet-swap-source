@@ -8,18 +8,19 @@ import { useEffect, useRef, useState } from "react";
 export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.15) {
   const ref = useRef<T | null>(null);
   const [shown, setShown] = useState(true);
-  const armed = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || armed.current) return;
-    armed.current = true;
+    if (!el) return;
     if (typeof IntersectionObserver === "undefined") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
     // Anything already inside the first viewport stays visible (hero, badge…)
     const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) return;
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setShown(true);
+      return;
+    }
 
     setShown(false);
     const io = new IntersectionObserver(
