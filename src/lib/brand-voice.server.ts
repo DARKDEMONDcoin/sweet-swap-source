@@ -86,7 +86,8 @@ function pickInternalLinks(html: string, base: string, max = 5): string[] {
   try {
     const { document } = parseHTML(html);
     const origin = new URL(base).origin;
-    const prefer = /(about|عن|story|قصت|service|خدم|product|منتج|blog|مدون|faq|اسئل|pricing|اسعار|contact)/i;
+    const prefer =
+      /(about|عن|story|قصت|service|خدم|product|منتج|blog|مدون|faq|اسئل|pricing|اسعار|contact)/i;
     const seen = new Set<string>();
     const scored: { href: string; score: number }[] = [];
     for (const a of Array.from(document.querySelectorAll("a[href]"))) {
@@ -105,7 +106,10 @@ function pickInternalLinks(html: string, base: string, max = 5): string[] {
       if (seen.has(key) || key === base.replace(/\/$/, "")) continue;
       seen.add(key);
       const text = `${abs.pathname} ${a.textContent ?? ""}`;
-      scored.push({ href: key, score: (prefer.test(text) ? 2 : 0) + (abs.pathname.split("/").length <= 3 ? 1 : 0) });
+      scored.push({
+        href: key,
+        score: (prefer.test(text) ? 2 : 0) + (abs.pathname.split("/").length <= 3 ? 1 : 0),
+      });
     }
     return scored
       .sort((a, b) => b.score - a.score)
@@ -192,17 +196,96 @@ export async function collectSiteText(
 const EMOJI_RE = /\p{Extended_Pictographic}/gu;
 
 const DIALECT_MARKERS: Record<StyleStats["dialect"], RegExp[]> = {
-  egyptian: [/\bإزاي\b|\bازاي\b/, /\bكده\b|\bكدة\b/, /\bدلوقتي\b/, /\bعايز/, /\bمش\b/, /\bليه\b/, /\bإحنا\b|\bاحنا\b/, /\bبتاع/, /\bخالص\b/, /\bأوي\b|\bاوي\b/, /\bجامد\b/, /\bهنا\b.*\bفي\b/],
-  gulf: [/\bوايد\b/, /\bشلون/, /\bحياك/, /\bزين\b/, /\bأبي\b|\bابي\b/, /\bتبي\b|\bتبغى\b/, /\bالحين\b/, /\bعاد\b/, /\bمو\b/, /\bيبيله\b/, /\bكفو\b/],
-  levantine: [/\bهلق\b|\bهلأ\b/, /\bشو\b/, /\bكتير\b/, /\bمنيح\b/, /\bبدي\b|\bبدك\b/, /\bهيك\b/, /\bليش\b/, /\bعنجد\b/],
-  maghrebi: [/\bبزاف\b/, /\bواش\b/, /\bكيفاش\b/, /\bدابا\b/, /\bلاباس\b/, /\bشنو\b/, /\bغادي\b/, /\bديال/],
-  msa: [/\bحيث\b/, /\bإن\b/, /\bلذلك\b/, /\bكما\b/, /\bالتي\b/, /\bالذي\b/, /\bنقدّم\b|\bنقدم\b/, /\bيمكنكم\b/, /\bتفضلوا\b/],
+  egyptian: [
+    /\bإزاي\b|\bازاي\b/,
+    /\bكده\b|\bكدة\b/,
+    /\bدلوقتي\b/,
+    /\bعايز/,
+    /\bمش\b/,
+    /\bليه\b/,
+    /\bإحنا\b|\bاحنا\b/,
+    /\bبتاع/,
+    /\bخالص\b/,
+    /\bأوي\b|\bاوي\b/,
+    /\bجامد\b/,
+    /\bهنا\b.*\bفي\b/,
+  ],
+  gulf: [
+    /\bوايد\b/,
+    /\bشلون/,
+    /\bحياك/,
+    /\bزين\b/,
+    /\bأبي\b|\bابي\b/,
+    /\bتبي\b|\bتبغى\b/,
+    /\bالحين\b/,
+    /\bعاد\b/,
+    /\bمو\b/,
+    /\bيبيله\b/,
+    /\bكفو\b/,
+  ],
+  levantine: [
+    /\bهلق\b|\bهلأ\b/,
+    /\bشو\b/,
+    /\bكتير\b/,
+    /\bمنيح\b/,
+    /\bبدي\b|\bبدك\b/,
+    /\bهيك\b/,
+    /\bليش\b/,
+    /\bعنجد\b/,
+  ],
+  maghrebi: [
+    /\bبزاف\b/,
+    /\bواش\b/,
+    /\bكيفاش\b/,
+    /\bدابا\b/,
+    /\bلاباس\b/,
+    /\bشنو\b/,
+    /\bغادي\b/,
+    /\bديال/,
+  ],
+  msa: [
+    /\bحيث\b/,
+    /\bإن\b/,
+    /\bلذلك\b/,
+    /\bكما\b/,
+    /\bالتي\b/,
+    /\bالذي\b/,
+    /\bنقدّم\b|\bنقدم\b/,
+    /\bيمكنكم\b/,
+    /\bتفضلوا\b/,
+  ],
   mixed: [],
 };
 
 const CTA_VERBS = [
-  "اطلب", "احجز", "تواصل", "اشترِ", "اشتري", "جرّب", "جرب", "سجّل", "سجل", "اكتشف", "ابدأ", "تسوق", "تسوّق", "حمّل", "حمل",
-  "اتصل", "راسلنا", "كلمنا", "اشترك", "احصل", "زورنا", "شوف", "خلّي", "خلي", "استمتع", "اطّلع", "اعرف", "تعرف",
+  "اطلب",
+  "احجز",
+  "تواصل",
+  "اشترِ",
+  "اشتري",
+  "جرّب",
+  "جرب",
+  "سجّل",
+  "سجل",
+  "اكتشف",
+  "ابدأ",
+  "تسوق",
+  "تسوّق",
+  "حمّل",
+  "حمل",
+  "اتصل",
+  "راسلنا",
+  "كلمنا",
+  "اشترك",
+  "احصل",
+  "زورنا",
+  "شوف",
+  "خلّي",
+  "خلي",
+  "استمتع",
+  "اطّلع",
+  "اعرف",
+  "تعرف",
 ];
 
 const STOP = new Set(
@@ -227,7 +310,10 @@ export function analyzeStyle(text: string, taglines: string[] = []): StyleStats 
   // اللهجة
   const dialectScores = (Object.keys(DIALECT_MARKERS) as StyleStats["dialect"][]).map((d) => ({
     d,
-    score: DIALECT_MARKERS[d].reduce((acc, re) => acc + (raw.match(new RegExp(re.source, "g"))?.length ?? 0), 0),
+    score: DIALECT_MARKERS[d].reduce(
+      (acc, re) => acc + (raw.match(new RegExp(re.source, "g"))?.length ?? 0),
+      0,
+    ),
   }));
   dialectScores.sort((a, b) => b.score - a.score);
   const top = dialectScores[0]!;
@@ -235,21 +321,37 @@ export function analyzeStyle(text: string, taglines: string[] = []): StyleStats 
   const total = dialectScores.reduce((a, b) => a + b.score, 0) || 1;
   let dialect: StyleStats["dialect"] = top.score === 0 ? "msa" : top.d;
   const conf = top.score / total;
-  if (top.d !== "msa" && second.d !== "msa" && second.score > 0 && top.score / (second.score || 1) < 1.6) dialect = "mixed";
+  if (
+    top.d !== "msa" &&
+    second.d !== "msa" &&
+    second.score > 0 &&
+    top.score / (second.score || 1) < 1.6
+  )
+    dialect = "mixed";
 
   // صيغة المخاطبة
   const you = (raw.match(/\b(أنت|انت|لك|ليك|عندك|تقدر|يمكنك|خلّيك|خليك|إنت)\b/g) ?? []).length;
-  const plural = (raw.match(/\b(أنتم|انتم|لكم|عندكم|يمكنكم|حضراتكم|تفضلوا|تقدروا)\b/g) ?? []).length;
-  const we = (raw.match(/\b(نحن|إحنا|احنا|نقدم|نقدّم|فريقنا|بنقدم|عندنا|نوفر|نوفّر)\b/g) ?? []).length;
+  const plural = (raw.match(/\b(أنتم|انتم|لكم|عندكم|يمكنكم|حضراتكم|تفضلوا|تقدروا)\b/g) ?? [])
+    .length;
+  const we = (raw.match(/\b(نحن|إحنا|احنا|نقدم|نقدّم|فريقنا|بنقدم|عندنا|نوفر|نوفّر)\b/g) ?? [])
+    .length;
   const addressing: StyleStats["addressing"] =
-    Math.max(you, plural, we) === 0 ? "محايد" : you >= plural && you >= we ? "أنت" : plural >= we ? "أنتم/حضراتكم" : "نحن";
+    Math.max(you, plural, we) === 0
+      ? "محايد"
+      : you >= plural && you >= we
+        ? "أنت"
+        : plural >= we
+          ? "أنتم/حضراتكم"
+          : "نحن";
 
   // الأفعال الدعوية
   const ctaVerbs = CTA_VERBS.filter((v) => new RegExp(`(^|\\s)${v}`).test(raw)).slice(0, 8);
 
   // مفردات مميزة
   const freq = new Map<string, number>();
-  const norm = normalizeArabic(raw).split(" ").filter((w) => w.length > 2 && !STOP.has(w) && !/^\d+$/.test(w));
+  const norm = normalizeArabic(raw)
+    .split(" ")
+    .filter((w) => w.length > 2 && !STOP.has(w) && !/^\d+$/.test(w));
   for (const w of norm) freq.set(w, (freq.get(w) ?? 0) + 1);
   const topTerms = [...freq.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -269,9 +371,15 @@ export function analyzeStyle(text: string, taglines: string[] = []): StyleStats 
   return {
     sampleWords: words.length,
     avgSentenceLength: Math.round(avg * 10) / 10,
-    shortSentenceRatio: lens.length ? Math.round((lens.filter((l) => l <= 8).length / lens.length) * 100) / 100 : 0,
-    questionRatio: sentences.length ? Math.round((sentences.filter((s) => /[؟?]$/.test(s)).length / sentences.length) * 100) / 100 : 0,
-    exclamationRatio: sentences.length ? Math.round((sentences.filter((s) => /!$/.test(s)).length / sentences.length) * 100) / 100 : 0,
+    shortSentenceRatio: lens.length
+      ? Math.round((lens.filter((l) => l <= 8).length / lens.length) * 100) / 100
+      : 0,
+    questionRatio: sentences.length
+      ? Math.round((sentences.filter((s) => /[؟?]$/.test(s)).length / sentences.length) * 100) / 100
+      : 0,
+    exclamationRatio: sentences.length
+      ? Math.round((sentences.filter((s) => /!$/.test(s)).length / sentences.length) * 100) / 100
+      : 0,
     emojiPerHundredWords: words.length ? Math.round((emojiCount / words.length) * 10000) / 100 : 0,
     englishRatio: words.length ? Math.round((englishWords / words.length) * 100) / 100 : 0,
     dialect,
@@ -374,13 +482,26 @@ export async function synthesizeVoice(
   return {
     summary: `صوت ${brand.name}: ${dialectLabel[stats.dialect]}، جمل بمتوسط ${stats.avgSentenceLength} كلمة، مخاطبة بصيغة «${stats.addressing}».`,
     personality: ["واضح", "قريب", "عملي"],
-    tone: { formality: stats.dialect === "msa" ? 7 : 4, energy: stats.exclamationRatio > 0.1 ? 7 : 5, warmth: 6, humor: 3 },
+    tone: {
+      formality: stats.dialect === "msa" ? 7 : 4,
+      energy: stats.exclamationRatio > 0.1 ? 7 : 5,
+      warmth: 6,
+      humor: 3,
+    },
     dialect: dialectLabel[stats.dialect],
     addressing: stats.addressing,
-    vocabulary: { use: stats.topTerms.slice(0, 10), avoid: ["مصطلحات تقنية ثقيلة", "مبالغات تسويقية", "ترجمة حرفية"] },
+    vocabulary: {
+      use: stats.topTerms.slice(0, 10),
+      avoid: ["مصطلحات تقنية ثقيلة", "مبالغات تسويقية", "ترجمة حرفية"],
+    },
     signaturePhrases: stats.taglines,
-    ctaStyle: stats.ctaVerbs.length ? `أفعال مباشرة مثل: ${stats.ctaVerbs.join("، ")}` : "دعوة مباشرة وقصيرة في نهاية النص",
-    emojiPolicy: stats.emojiPerHundredWords > 0.5 ? "إيموجي خفيف (1-2) في السوشيال فقط" : "بلا إيموجي إلا نادرًا",
+    ctaStyle: stats.ctaVerbs.length
+      ? `أفعال مباشرة مثل: ${stats.ctaVerbs.join("، ")}`
+      : "دعوة مباشرة وقصيرة في نهاية النص",
+    emojiPolicy:
+      stats.emojiPerHundredWords > 0.5
+        ? "إيموجي خفيف (1-2) في السوشيال فقط"
+        : "بلا إيموجي إلا نادرًا",
     formatting: ["جمل قصيرة", "فقرات من سطرين إلى ثلاثة", "قوائم عند تعدد النقاط"],
     doList: ["اذكر الفائدة قبل الميزة", "استخدم مفردات العلامة", "اختم بدعوة واحدة واضحة"],
     dontList: ["لا تخلط اللهجات", "لا تبالغ بالوعود", "لا تستخدم عبارات مترجمة حرفياً"],
@@ -407,7 +528,9 @@ export function voiceRuleText(profile: BrandVoiceProfile, stats: StyleStats): st
     `لا تفعل: ${(profile.dontList ?? []).join("؛ ")}`,
   ];
   if (profile.perChannel?.length) {
-    lines.push(`حسب القناة: ${profile.perChannel.map((c) => `${c.channel}: ${c.guidance}`).join(" || ")}`);
+    lines.push(
+      `حسب القناة: ${profile.perChannel.map((c) => `${c.channel}: ${c.guidance}`).join(" || ")}`,
+    );
   }
   return lines.join("\n");
 }

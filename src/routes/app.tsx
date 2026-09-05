@@ -40,7 +40,10 @@ export const Route = createFileRoute("/app")({
       <div className="max-w-md">
         <p className="font-display text-lg font-black">تعذّر فتح مساحة العمل</p>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <a href="/app" className="mt-4 inline-block rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background">
+        <a
+          href="/app"
+          className="mt-4 inline-block rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background"
+        >
           حاول مرة أخرى
         </a>
       </div>

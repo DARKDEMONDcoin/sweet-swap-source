@@ -2,7 +2,15 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, Gauge, Globe, Loader2, ScanSearch, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Gauge,
+  Globe,
+  Loader2,
+  ScanSearch,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { auditSite } from "@/lib/seo-audit.functions";
@@ -11,7 +19,12 @@ import { cn } from "@/lib/utils";
 
 const statusUi = {
   pass: { icon: CheckCircle2, cls: "text-jade", bg: "bg-jade/10", label: "ممتاز" },
-  warn: { icon: AlertTriangle, cls: "text-amber-600", bg: "bg-amber-500/10", label: "يحتاج تحسينًا" },
+  warn: {
+    icon: AlertTriangle,
+    cls: "text-amber-600",
+    bg: "bg-amber-500/10",
+    label: "يحتاج تحسينًا",
+  },
   fail: { icon: XCircle, cls: "text-coral", bg: "bg-coral/10", label: "مشكلة" },
 } as const;
 
@@ -52,7 +65,9 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
   const nourPrompt = result
     ? `افحصت صفحتي ${result.finalUrl} ووجدت هذه المشاكل:\n${[...fails, ...warns]
         .map((c) => `- ${c.label}: ${c.detail}`)
-        .join("\n")}\nاكتب لي خطة إصلاح مرتبة بالأولوية مع النصوص الجاهزة (العنوان، الوصف، H1، schema).`
+        .join(
+          "\n",
+        )}\nاكتب لي خطة إصلاح مرتبة بالأولوية مع النصوص الجاهزة (العنوان، الوصف، H1، schema).`
     : "";
 
   return (
@@ -68,7 +83,8 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
           <div>
             <h2 className="font-display text-lg font-black">فحص سيو فوري لأي صفحة — مجانًا</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              لا يحتاج ربط Search Console: ١٦ فحصًا للعنوان والوصف والعناوين والصور وSchema والعربية/RTL + سرعة Lighthouse.
+              لا يحتاج ربط Search Console: ١٦ فحصًا للعنوان والوصف والعناوين والصور وSchema
+              والعربية/RTL + سرعة Lighthouse.
             </p>
           </div>
         </div>
@@ -109,7 +125,9 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
         </button>
       </form>
       {audit.isPending ? (
-        <p className="mt-2 text-xs text-muted-foreground">قياس السرعة عبر Lighthouse قد يستغرق حتى ٣٠ ثانية.</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          قياس السرعة عبر Lighthouse قد يستغرق حتى ٣٠ ثانية.
+        </p>
       ) : null}
 
       {result ? (
@@ -122,12 +140,20 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
             <div className="text-xs text-muted-foreground">
               {result.speed ? (
                 <>
-                  <p>LCP: <b className="text-foreground">{result.speed.lcp ?? "—"}</b></p>
-                  <p>CLS: <b className="text-foreground">{result.speed.cls ?? "—"}</b></p>
-                  <p>INP: <b className="text-foreground">{result.speed.inp ?? "—"}</b></p>
+                  <p>
+                    LCP: <b className="text-foreground">{result.speed.lcp ?? "—"}</b>
+                  </p>
+                  <p>
+                    CLS: <b className="text-foreground">{result.speed.cls ?? "—"}</b>
+                  </p>
+                  <p>
+                    INP: <b className="text-foreground">{result.speed.inp ?? "—"}</b>
+                  </p>
                 </>
               ) : (
-                <p className="max-w-[12rem]">لم تتوفر قياسات Lighthouse الآن — أعد المحاولة بعد قليل.</p>
+                <p className="max-w-[12rem]">
+                  لم تتوفر قياسات Lighthouse الآن — أعد المحاولة بعد قليل.
+                </p>
               )}
             </div>
           </div>
@@ -136,21 +162,33 @@ export function SeoAuditCard({ defaultUrl = "" }: { defaultUrl?: string }) {
             <span className="font-black text-coral">{fails.length} مشكلة</span> ·{" "}
             <span className="font-black text-amber-600">{warns.length} تحسين</span> ·{" "}
             <span className="font-black text-jade">{passes.length} ممتاز</span>
-            <span className="text-muted-foreground"> — {result.page.wordCount.toLocaleString("ar-EG")} كلمة · {result.page.images} صورة · {result.page.internalLinks} رابط داخلي</span>
+            <span className="text-muted-foreground">
+              {" "}
+              — {result.page.wordCount.toLocaleString("ar-EG")} كلمة · {result.page.images} صورة ·{" "}
+              {result.page.internalLinks} رابط داخلي
+            </span>
           </p>
 
           <ul className="grid gap-2 md:grid-cols-2">
             {ordered.map((c) => {
               const ui = statusUi[c.status];
               return (
-                <li key={c.id} className={cn("rounded-2xl border border-border p-3.5 text-sm", c.status !== "pass" && ui.bg)}>
+                <li
+                  key={c.id}
+                  className={cn(
+                    "rounded-2xl border border-border p-3.5 text-sm",
+                    c.status !== "pass" && ui.bg,
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <ui.icon className={cn("size-4 shrink-0", ui.cls)} />
                     <span className="font-bold">{c.label}</span>
                     <span className={cn("ms-auto text-[11px] font-bold", ui.cls)}>{ui.label}</span>
                   </div>
                   <p className="mt-1 break-words text-muted-foreground">{c.detail}</p>
-                  {c.fix && c.status !== "pass" ? <p className="mt-1 text-xs font-semibold text-ink-soft">↳ {c.fix}</p> : null}
+                  {c.fix && c.status !== "pass" ? (
+                    <p className="mt-1 text-xs font-semibold text-ink-soft">↳ {c.fix}</p>
+                  ) : null}
                 </li>
               );
             })}

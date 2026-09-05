@@ -26,13 +26,22 @@ function Meter({ label, value }: { label: string; value: number }) {
         <span className="text-muted-foreground">{v}/10</span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
-        <div className="h-full rounded-full" style={{ width: `${v * 10}%`, backgroundImage: "var(--gradient-aurora)" }} />
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${v * 10}%`, backgroundImage: "var(--gradient-aurora)" }}
+        />
       </div>
     </div>
   );
 }
 
-export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspaceId?: string; compact?: boolean }) {
+export function BrandVoiceExtractor({
+  workspaceId,
+  compact = false,
+}: {
+  workspaceId?: string | undefined;
+  compact?: boolean;
+}) {
   const qc = useQueryClient();
   const run = useServerFn(extractBrandVoice);
   const [mode, setMode] = useState<"url" | "samples">("url");
@@ -76,11 +85,14 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
           <div>
             <h2 className="font-display text-lg font-black">استخرج صوت علامتك تلقائيًا</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              نقرأ موقعك، نحلّل اللهجة والنبرة والمفردات، ونبني «دليل صوت العلامة» يلتزم به الفريق كله فورًا — مجانًا.
+              نقرأ موقعك، نحلّل اللهجة والنبرة والمفردات، ونبني «دليل صوت العلامة» يلتزم به الفريق
+              كله فورًا — مجانًا.
             </p>
           </div>
         </div>
-        <span className="rounded-full bg-jade/12 px-3 py-1 text-xs font-bold text-jade">مفتوح المصدر · بلا تكلفة</span>
+        <span className="rounded-full bg-jade/12 px-3 py-1 text-xs font-bold text-jade">
+          مفتوح المصدر · بلا تكلفة
+        </span>
       </div>
 
       <form
@@ -156,7 +168,8 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
             <div>
               <p className="font-bold">{p.summary}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {(p.personality ?? []).join(" · ")} — اللهجة: {p.dialect || dialectAr[s.dialect]} — المخاطبة: {p.addressing || s.addressing}
+                {(p.personality ?? []).join(" · ")} — اللهجة: {p.dialect || dialectAr[s.dialect]} —
+                المخاطبة: {p.addressing || s.addressing}
                 {result.sourceUrls.length ? ` — من ${result.sourceUrls.length} صفحات` : ""}
               </p>
             </div>
@@ -189,7 +202,10 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
               <h3 className="text-sm font-black">عبارات مميزة</h3>
               <ul className="mt-2 flex flex-wrap gap-2">
                 {p.signaturePhrases.map((ph) => (
-                  <li key={ph} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs">
+                  <li
+                    key={ph}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"
+                  >
                     <Quote className="size-3 text-primary" /> {ph}
                   </li>
                 ))}
@@ -204,7 +220,9 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
             </div>
             <div className="rounded-2xl border border-border p-4">
               <h3 className="text-sm font-black text-coral">مفردات نتجنبها</h3>
-              <p className="mt-2 text-sm leading-relaxed">{(p.vocabulary?.avoid ?? []).join("، ")}</p>
+              <p className="mt-2 text-sm leading-relaxed">
+                {(p.vocabulary?.avoid ?? []).join("، ")}
+              </p>
             </div>
           </div>
 
@@ -213,8 +231,13 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
               <h3 className="text-sm font-black">قبل / بعد بصوت علامتك</h3>
               <ul className="mt-2 space-y-2">
                 {p.samples.slice(0, 3).map((x, i) => (
-                  <li key={i} className="grid gap-2 rounded-2xl border border-border p-3 text-sm sm:grid-cols-2">
-                    <p className="text-muted-foreground line-through decoration-coral/50">{x.before}</p>
+                  <li
+                    key={i}
+                    className="grid gap-2 rounded-2xl border border-border p-3 text-sm sm:grid-cols-2"
+                  >
+                    <p className="text-muted-foreground line-through decoration-coral/50">
+                      {x.before}
+                    </p>
                     <p className="font-semibold">{x.after}</p>
                   </li>
                 ))}
@@ -234,7 +257,8 @@ export function BrandVoiceExtractor({ workspaceId, compact = false }: { workspac
           ) : null}
 
           <p className="flex items-center gap-2 rounded-2xl bg-jade/10 px-4 py-3 text-sm font-semibold text-jade">
-            <Check className="size-4" /> حُفظ كـ «دليل صوت العلامة» في عقل العلامة — يُحقن تلقائيًا في نور وسِراج وكل الموظفين.
+            <Check className="size-4" /> حُفظ كـ «دليل صوت العلامة» في عقل العلامة — يُحقن تلقائيًا
+            في نور وسِراج وكل الموظفين.
           </p>
         </div>
       ) : null}

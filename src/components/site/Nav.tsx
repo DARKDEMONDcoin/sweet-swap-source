@@ -15,7 +15,6 @@ const links = [
   { label: "المدونة", to: "/blog" },
 ] as const;
 
-
 export function Nav({ variant = "over" }: { variant?: "over" | "solid" }) {
   const scrolled = useScrolled(24);
   const [open, setOpen] = useState(false);
@@ -50,7 +49,9 @@ export function Nav({ variant = "over" }: { variant?: "over" | "solid" }) {
                   "relative rounded-lg px-3 py-2 text-[0.93rem] font-medium transition-colors",
                   solid ? "text-ink-soft hover:text-primary" : "text-white/85 hover:text-white",
                 )}
-                activeProps={{ className: solid ? "text-primary font-bold" : "text-white font-bold" }}
+                activeProps={{
+                  className: solid ? "text-primary font-bold" : "text-white font-bold",
+                }}
               >
                 {l.label}
               </Link>
