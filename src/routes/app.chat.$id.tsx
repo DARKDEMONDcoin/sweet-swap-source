@@ -159,6 +159,9 @@ function ChatPage() {
   const ask = useServerFn(askEmployee);
   const runSkillFn = useServerFn(runSkill);
   const employeeSkills = skillsFor(id);
+  const quickSkills = featuredSkillsFor(id).slice(0, 6);
+  /** آخر رسالة فشل إرسالها — لزر «أعد المحاولة». */
+  const [pendingText, setPendingText] = useState<string | null>(null);
 
   const owned = (integrations ?? []).filter((i) => i.employee_id === id);
   const wpConnected = (integrations ?? []).some(
