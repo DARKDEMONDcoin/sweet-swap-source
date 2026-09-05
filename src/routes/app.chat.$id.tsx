@@ -99,6 +99,8 @@ function looksPostable(body: string): boolean {
 }
 
 export const Route = createFileRoute("/app/chat/$id")({
+  validateSearch: (s: Record<string, unknown>): { prompt?: string } =>
+    typeof s["prompt"] === "string" && s["prompt"] ? { prompt: s["prompt"].slice(0, 4000) } : {},
   loader: ({ params }) => {
     const member = getMember(params.id);
     if (!member) throw notFound();
@@ -170,7 +172,11 @@ function ChatPage() {
   const { data: workspace } = useWorkspace();
   const { data: messages } = useMessages(workspace?.id, id);
   const { data: integrations } = useIntegrations(workspace?.id);
-  const [draft, setDraft] = useState("");
+  const { prompt: prefill } = Route.useSearch();
+  const [draft, setDraft] = useState(prefill ?? "");
+  useEffect(() => {
+    if (prefill) setDraft(prefill);
+  }, [prefill]);
   const [pending, setPending] = useState<string | null>(null);
   const [savedTask, setSavedTask] = useState(false);
 
