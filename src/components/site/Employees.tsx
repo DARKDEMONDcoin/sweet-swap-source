@@ -144,7 +144,7 @@ export function Employees() {
         </h2>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
           كل موظف متخصص في مجاله ومتصل ببقية الفريق. يتشاركون نفس السياق عن شركتك، فلا تشرح نفسك
-          مرتين.
+          مرتين — ويظهرون لك بزيّ بلدك من مصر إلى المغرب ومن الخليج إلى السودان.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <span className="text-sm font-semibold text-muted-foreground">فريقك بزيّ بلدك:</span>

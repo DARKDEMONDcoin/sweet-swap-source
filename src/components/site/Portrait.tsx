@@ -1,5 +1,8 @@
+import { useState } from "react";
+import { ChevronDown, MapPin, Sparkles } from "lucide-react";
 import { useRegion } from "@/hooks/use-region";
-import { portraitOf, REGIONS, REGION_LABELS } from "@/data/team-portraits";
+import { COUNTRIES, COUNTRY_GROUPS, portraitOf } from "@/data/team-portraits";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type PortraitProps = {
@@ -28,34 +31,83 @@ export function Portrait({ memberId, name, className, eager }: PortraitProps) {
   );
 }
 
-/** مبدّل الزي الإقليمي — يظهر للزائر ليختار بلده بنفسه. */
+/**
+ * مبدّل البلد — يعرض كل الدول العربية الـ22 مجمّعة حسب المنطقة.
+ * يُكتشف بلد الزائر تلقائياً، ويستطيع تغييره في أي وقت.
+ */
 export function RegionPicker({ className }: { className?: string }) {
-  const { region, setRegion } = useRegion();
+  const { country, countryInfo, setCountry, auto } = useRegion();
+  const [open, setOpen] = useState(false);
+
   return (
-    <div
-      className={cn(
-        "inline-flex flex-wrap items-center gap-1 rounded-full border border-border bg-card/70 p-1 backdrop-blur",
-        className,
-      )}
-      role="group"
-      aria-label="اختر زي الفريق حسب بلدك"
-    >
-      {REGIONS.map((r) => (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <button
-          key={r}
           type="button"
-          onClick={() => setRegion(r)}
-          aria-pressed={region === r}
+          aria-label="اختر بلدك ليظهر الفريق بزيّه"
           className={cn(
-            "rounded-full px-3.5 py-1.5 text-sm font-bold transition-all duration-300",
-            region === r
-              ? "bg-primary text-primary-foreground shadow-card"
-              : "text-muted-foreground hover:text-foreground",
+            "group inline-flex items-center gap-2 rounded-full border border-border bg-card/80 py-1.5 pr-1.5 pl-4 text-sm font-bold shadow-card backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift",
+            className,
           )}
         >
-          {REGION_LABELS[r]}
+          <span className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground">
+            <MapPin className="size-3.5" strokeWidth={2.6} />
+          </span>
+          <span className="flex flex-col items-start leading-none">
+            <span>{countryInfo.name}</span>
+            {auto && (
+              <span className="mt-1 flex items-center gap-1 text-[0.62rem] font-semibold opacity-70">
+                <Sparkles className="size-2.5" />
+                اكتشفناه تلقائياً
+              </span>
+            )}
+          </span>
+          <ChevronDown
+            className={cn("size-4 opacity-60 transition-transform duration-300", open && "rotate-180")}
+          />
         </button>
-      ))}
-    </div>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={10}
+        className="w-[min(92vw,34rem)] rounded-3xl border-border bg-card p-5 shadow-lift"
+      >
+        <p className="font-display text-base font-extrabold">فريقك بزيّ بلدك</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          نفس الموظفين، بملابس تناسب ثقافة كل بلد عربي. اختر بلدك:
+        </p>
+        <div className="mt-4 space-y-4">
+          {COUNTRY_GROUPS.map((g) => (
+            <div key={g}>
+              <p className="mb-2 text-[0.7rem] font-bold tracking-wider text-primary">{g}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {COUNTRIES.filter((c) => c.group === g).map((c) => {
+                  const on = c.code === country;
+                  return (
+                    <button
+                      key={c.code}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        setCountry(c.code);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm font-semibold transition-all duration-200",
+                        on
+                          ? "border-transparent bg-foreground text-background shadow-card"
+                          : "border-border bg-background text-ink-soft hover:border-primary/50 hover:text-primary",
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
