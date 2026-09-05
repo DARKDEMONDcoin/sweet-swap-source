@@ -125,6 +125,7 @@ export async function auditPage(rawUrl: string): Promise<SeoAudit> {
     }
   }
 
+  for (const el of qa("script, style, noscript, template, svg")) el.remove();
   const bodyText = (document.body?.textContent ?? "").replace(/\s+/g, " ").trim();
   const wordCount = bodyText ? bodyText.split(" ").length : 0;
   const arabicRatio = bodyText
