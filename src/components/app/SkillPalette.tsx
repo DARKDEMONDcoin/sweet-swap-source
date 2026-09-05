@@ -236,7 +236,10 @@ export function SkillPalette({ skills, disabled, pending, onRun, quick, hideQuic
                               <span className="flex items-center gap-1.5 text-sm font-bold">
                                 {s.title}
                                 {s.featured ? (
-                                  <Star className="size-3 fill-amber text-amber" aria-label="مميّزة" />
+                                  <Star
+                                    className="size-3 fill-amber text-amber"
+                                    aria-label="مميّزة"
+                                  />
                                 ) : null}
                               </span>
                               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
@@ -272,7 +275,9 @@ export function SkillPalette({ skills, disabled, pending, onRun, quick, hideQuic
               {(() => {
                 const meta = categoryMeta(open.category);
                 return (
-                  <span className={cn("grid size-11 shrink-0 place-items-center rounded-2xl", meta.hue)}>
+                  <span
+                    className={cn("grid size-11 shrink-0 place-items-center rounded-2xl", meta.hue)}
+                  >
                     <meta.icon className="size-5" strokeWidth={2.2} />
                   </span>
                 );
@@ -361,7 +366,11 @@ export function SkillPalette({ skills, disabled, pending, onRun, quick, hideQuic
                     (!ready || pending) && "opacity-50 hover:translate-y-0 hover:shadow-none",
                   )}
                 >
-                  {pending ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+                  {pending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="size-4" />
+                  )}
                   نفّذ المهمة
                 </button>
                 {!ready && requiredCount > 0 ? (

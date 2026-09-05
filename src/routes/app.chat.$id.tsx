@@ -23,12 +23,36 @@ import { cn } from "@/lib/utils";
 
 /** اقتراحات بداية سريعة لكل موظف — تُرسل كرسالة مباشرة. */
 const STARTERS: Record<string, string[]> = {
-  nour: ["اقترح 10 عناوين مقالات لمتجري", "اكتب وصف ميتا لصفحة خدماتي", "ما أهم 5 كلمات مفتاحية في مجالي؟"],
-  sonny: ["اكتب 3 أفكار منشورات لهذا الأسبوع", "منشور إطلاق منتج جديد بلهجة مصرية", "اقترح هاشتاقات لمقهى في الرياض"],
-  eva: ["رد على عميل يشتكي من تأخر الشحن", "صِغ رسالة ترحيب للعملاء الجدد", "رتّب لي أولويات بريد اليوم"],
-  sam: ["اكتب رسالة متابعة لعميل لم يرد", "حلّل هذا العرض واقترح تحسينه", "ما أفضل وقت للمتابعة مع العملاء؟"],
-  dana: ["صمّم فكرة بوست لعرض الجمعة البيضاء", "اقترح لوحة ألوان لعلامتي", "فكرة غلاف لحساب إنستجرام"],
-  adam: ["لخّص أداء الأسبوع الماضي", "ما المقياس الأهم لمتجري الآن؟", "جهّز تقريراً شهرياً مختصراً"],
+  nour: [
+    "اقترح 10 عناوين مقالات لمتجري",
+    "اكتب وصف ميتا لصفحة خدماتي",
+    "ما أهم 5 كلمات مفتاحية في مجالي؟",
+  ],
+  sonny: [
+    "اكتب 3 أفكار منشورات لهذا الأسبوع",
+    "منشور إطلاق منتج جديد بلهجة مصرية",
+    "اقترح هاشتاقات لمقهى في الرياض",
+  ],
+  eva: [
+    "رد على عميل يشتكي من تأخر الشحن",
+    "صِغ رسالة ترحيب للعملاء الجدد",
+    "رتّب لي أولويات بريد اليوم",
+  ],
+  sam: [
+    "اكتب رسالة متابعة لعميل لم يرد",
+    "حلّل هذا العرض واقترح تحسينه",
+    "ما أفضل وقت للمتابعة مع العملاء؟",
+  ],
+  dana: [
+    "صمّم فكرة بوست لعرض الجمعة البيضاء",
+    "اقترح لوحة ألوان لعلامتي",
+    "فكرة غلاف لحساب إنستجرام",
+  ],
+  adam: [
+    "لخّص أداء الأسبوع الماضي",
+    "ما المقياس الأهم لمتجري الآن؟",
+    "جهّز تقريراً شهرياً مختصراً",
+  ],
 };
 
 /** يقسّم الرسائل حسب اليوم لعرض فواصل تاريخ أنيقة. */
@@ -136,7 +160,6 @@ function prettyBody(body: string): string {
 }
 
 function timeOf(iso: string) {
-
   return new Date(iso).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
 }
 
@@ -167,7 +190,6 @@ function ChatPage() {
   const wpConnected = (integrations ?? []).some(
     (i) => i.provider === "wordpress" && i.status === "connected",
   );
-
 
   const send = useMutation({
     mutationFn: (message: string) =>
@@ -206,7 +228,6 @@ function ChatPage() {
     onError: (e: unknown) => setError(e instanceof Error ? e.message : "تعذّر تنفيذ المهمة"),
   });
 
-
   const busy = send.isPending || skillRun.isPending;
 
   useEffect(() => {
@@ -235,7 +256,6 @@ function ChatPage() {
     setPending(body);
     send.mutate(body);
   };
-
 
   return (
     <AppShell
@@ -329,7 +349,11 @@ function ChatPage() {
                       )}
                     >
                       {isUser ? <p dir="auto">{m.body}</p> : <Markdown body={body} />}
-                      {!isUser && id === "nour" && workspace && wpConnected && m.body.length > 200 ? (
+                      {!isUser &&
+                      id === "nour" &&
+                      workspace &&
+                      wpConnected &&
+                      m.body.length > 200 ? (
                         <PublishToWordPress workspaceId={workspace.id} body={m.body} />
                       ) : null}
                       {!isUser && id === "sonny" && workspace && looksPostable(m.body) ? (
@@ -456,7 +480,8 @@ function ChatPage() {
                 </button>
               </div>
               <p className="px-3 pb-1 pt-1.5 text-[0.65rem] text-muted-foreground">
-                Enter للإرسال · Shift+Enter لسطر جديد · <Sparkles className="inline size-3 text-primary" /> يقرأ من عقل علامتك
+                Enter للإرسال · Shift+Enter لسطر جديد ·{" "}
+                <Sparkles className="inline size-3 text-primary" /> يقرأ من عقل علامتك
               </p>
             </form>
           </div>
