@@ -423,3 +423,10 @@
     var(--foreground) 100%
   );
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
