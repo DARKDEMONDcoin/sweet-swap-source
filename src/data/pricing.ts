@@ -72,8 +72,36 @@ export const plans: Plan[] = [
   },
 ];
 
-/** السعر المعروض حسب دورة الفوترة المختارة. */
-export function priceOf(plan: Plan, yearly: boolean): string {
+/** العملات المحلية — السعر الأساسي بالريال السعودي، ويُعرض بعملة بلد الزائر. */
+export type Currency = { code: string; label: string; rate: number; step: number };
+
+const USD: Currency = { code: "USD", label: "دولار", rate: 0.267, step: 1 };
+
+export const CURRENCIES: Record<string, Currency> = {
+  SA: { code: "SAR", label: "ر.س", rate: 1, step: 1 },
+  EG: { code: "EGP", label: "ج.م", rate: 13.3, step: 10 },
+  AE: { code: "AED", label: "د.إ", rate: 0.98, step: 1 },
+  KW: { code: "KWD", label: "د.ك", rate: 0.082, step: 0.5 },
+  QA: { code: "QAR", label: "ر.ق", rate: 0.97, step: 1 },
+  BH: { code: "BHD", label: "د.ب", rate: 0.1, step: 0.5 },
+  OM: { code: "OMR", label: "ر.ع", rate: 0.103, step: 0.5 },
+  JO: { code: "JOD", label: "د.أ", rate: 0.19, step: 1 },
+  MA: { code: "MAD", label: "د.م", rate: 2.6, step: 5 },
+};
+
+export function currencyOf(countryCode: string): Currency {
+  return CURRENCIES[countryCode] ?? USD;
+}
+
+function roundTo(n: number, step: number): number {
+  const v = Math.round(n / step) * step;
+  return step < 1 ? Number(v.toFixed(1)) : v;
+}
+
+/** السعر المعروض حسب دورة الفوترة المختارة وعملة البلد. */
+export function priceOf(plan: Plan, yearly: boolean, countryCode = "SA"): string {
   if (plan.monthly === null) return "حسب الطلب";
-  return String(yearly ? Math.round(plan.monthly * (1 - yearlyDiscount)) : plan.monthly);
+  const cur = currencyOf(countryCode);
+  const sar = yearly ? plan.monthly * (1 - yearlyDiscount) : plan.monthly;
+  return roundTo(sar * cur.rate, cur.step).toLocaleString("en-US");
 }

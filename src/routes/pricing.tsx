@@ -3,7 +3,9 @@ import { Check, Minus } from "lucide-react";
 
 import { PageShell, PageHero, CtaBand } from "@/components/site/PageShell";
 import { Reveal } from "@/components/Reveal";
-import { plans, priceOf } from "@/data/pricing";
+import { plans, priceOf, currencyOf } from "@/data/pricing";
+import { useRegion } from "@/hooks/use-region";
+import { RegionPicker } from "@/components/site/Portrait";
 
 
 export const Route = createFileRoute("/pricing")({
@@ -42,15 +44,21 @@ const matrix: { f: string; v: (boolean | string)[] }[] = [
 ];
 
 function PricingPage() {
+  const { country } = useRegion();
+  const cur = currencyOf(country);
   return (
     <PageShell>
       <PageHero
         eyebrow="أسعار واضحة"
         title="فريق كامل بأقل من راتب موظف مبتدئ"
-        lead="بدون رسوم إعداد، بدون عقد سنوي إجباري، وبدون مفاجآت في الفاتورة. الأسعار بالريال السعودي شهرياً."
+        lead="بدون رسوم إعداد، بدون عقد سنوي إجباري، وبدون مفاجآت في الفاتورة. الأسعار شهرية وتُعرض تقريبياً بعملة بلدك."
       />
 
       <section className="mx-auto max-w-6xl px-5 py-14">
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+          <span>العملة حسب بلدك:</span>
+          <RegionPicker />
+        </div>
         <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((p, i) => (
             <Reveal key={p.id} delay={i * 70}>
@@ -80,10 +88,10 @@ function PricingPage() {
                   <p className="mt-1 text-sm text-muted-foreground">{p.tag}</p>
                   <div className="mt-6 flex items-end gap-2">
                     <span className="font-display text-4xl font-black text-primary">
-                      {priceOf(p, false)}
+                      {priceOf(p, false, country)}
                     </span>
                     {p.monthly !== null ? (
-                      <span className="pb-1 text-sm text-muted-foreground">ريال / شهرياً</span>
+                      <span className="pb-1 text-sm text-muted-foreground">{cur.label} / شهرياً</span>
                     ) : null}
                   </div>
 
