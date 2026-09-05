@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Printer } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
+import { SeoAuditCard } from "@/components/app/SeoAuditCard";
 import { useWorkspace } from "@/lib/data";
 import { buildReport } from "@/lib/reports.functions";
 
@@ -11,7 +12,10 @@ export const Route = createFileRoute("/app/reports")({
   head: () => ({
     meta: [
       { title: "تقارير السيو | سهل" },
-      { name: "description", content: "تقرير سيو قابل للطباعة من بيانات Search Console وGA4 الحقيقية." },
+      {
+        name: "description",
+        content: "تقرير سيو قابل للطباعة من بيانات Search Console وGA4 الحقيقية.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -82,6 +86,9 @@ function ReportsPage() {
         </button>
       }
     >
+      <div className="mb-6">
+        <SeoAuditCard />
+      </div>
       {isLoading ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> جارٍ تجميع البيانات…
@@ -89,6 +96,10 @@ function ReportsPage() {
       ) : error ? (
         <p className="rounded-2xl bg-coral/12 px-4 py-3 text-sm font-semibold text-coral">
           {error instanceof Error ? error.message : "تعذّر بناء التقرير"}
+        </p>
+      ) : !workspace && !isLoading ? (
+        <p className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
+          مساحة العمل غير جاهزة بعد — أعد تحميل الصفحة.
         </p>
       ) : data ? (
         <article className="rounded-3xl border border-border bg-card p-6 print:border-0 print:p-0">
@@ -113,8 +124,14 @@ function ReportsPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: "نقرات البحث", value: data.search ? num(data.search.totals.clicks) : "—" },
-              { label: "مرات الظهور", value: data.search ? num(data.search.totals.impressions) : "—" },
-              { label: "جلسات الموقع", value: data.analytics ? num(data.analytics.totals.sessions) : "—" },
+              {
+                label: "مرات الظهور",
+                value: data.search ? num(data.search.totals.impressions) : "—",
+              },
+              {
+                label: "جلسات الموقع",
+                value: data.analytics ? num(data.analytics.totals.sessions) : "—",
+              },
               { label: "مخرجات جاهزة", value: num(data.work.published + data.work.awaiting) },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-border p-4">

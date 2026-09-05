@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2 } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2, Fingerprint } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
 import { getMember } from "@/data/team";
 import { integrationStatusLabel } from "@/data/app";
-import { useIntegrations, useMessages, useWorkspace } from "@/lib/data";
+import { useBrainItems, useIntegrations, useMessages, useWorkspace } from "@/lib/data";
 import { askEmployee, runSkill } from "@/lib/ai.functions";
 import { SkillPalette } from "@/components/app/SkillPalette";
 import { Thinking } from "@/components/app/Thinking";
@@ -99,6 +99,8 @@ function looksPostable(body: string): boolean {
 }
 
 export const Route = createFileRoute("/app/chat/$id")({
+  validateSearch: (s: Record<string, unknown>): { prompt?: string } =>
+    typeof s["prompt"] === "string" && s["prompt"] ? { prompt: s["prompt"].slice(0, 4000) } : {},
   loader: ({ params }) => {
     const member = getMember(params.id);
     if (!member) throw notFound();
@@ -170,7 +172,13 @@ function ChatPage() {
   const { data: workspace } = useWorkspace();
   const { data: messages } = useMessages(workspace?.id, id);
   const { data: integrations } = useIntegrations(workspace?.id);
-  const [draft, setDraft] = useState("");
+  const { data: brainItems } = useBrainItems(workspace?.id);
+  const hasVoiceGuide = (brainItems ?? []).some((b) => b.title === "دليل صوت العلامة");
+  const { prompt: prefill } = Route.useSearch();
+  const [draft, setDraft] = useState(prefill ?? "");
+  useEffect(() => {
+    if (prefill) setDraft(prefill);
+  }, [prefill]);
   const [pending, setPending] = useState<string | null>(null);
   const [savedTask, setSavedTask] = useState(false);
 
@@ -282,6 +290,26 @@ function ChatPage() {
             className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_9%,transparent),transparent)]"
           />
           <div className="relative mx-auto w-full max-w-4xl flex-1 space-y-4 px-5 py-6">
+            {brainItems && !hasVoiceGuide && ["sonny", "nour", "eva", "dana"].includes(id) ? (
+              <Link
+                to="/app/brain"
+                className="group flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
+              >
+                <span
+                  className="grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground"
+                  style={{ backgroundImage: "var(--gradient-aurora)" }}
+                >
+                  <Fingerprint className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">خلّي {member.name} يكتب بصوت علامتك بالضبط</span>
+                  <span className="block text-xs text-muted-foreground">
+                    الصق رابط موقعك مرة واحدة — نستخرج اللهجة والنبرة والمفردات ويلتزم بها الفريق كله. مجانًا.
+                  </span>
+                </span>
+                <ArrowUpLeft className="size-4 shrink-0 text-primary transition-transform group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" />
+              </Link>
+            ) : null}
             {(messages ?? []).length === 0 && !pending ? (
               <div className="animate-pop-in rounded-3xl border border-border bg-card p-8 text-center shadow-card">
                 <span className="relative mx-auto block size-20 rounded-3xl">

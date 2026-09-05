@@ -15,7 +15,6 @@ const links = [
   { label: "المدونة", to: "/blog" },
 ] as const;
 
-
 export function Nav({ variant = "over" }: { variant?: "over" | "solid" }) {
   const scrolled = useScrolled(24);
   const [open, setOpen] = useState(false);
@@ -50,7 +49,9 @@ export function Nav({ variant = "over" }: { variant?: "over" | "solid" }) {
                   "relative rounded-lg px-3 py-2 text-[0.93rem] font-medium transition-colors",
                   solid ? "text-ink-soft hover:text-primary" : "text-white/85 hover:text-white",
                 )}
-                activeProps={{ className: solid ? "text-primary font-bold" : "text-white font-bold" }}
+                activeProps={{
+                  className: solid ? "text-primary font-bold" : "text-white font-bold",
+                }}
               >
                 {l.label}
               </Link>
@@ -104,42 +105,54 @@ export function Nav({ variant = "over" }: { variant?: "over" | "solid" }) {
 
       <div
         className={cn(
-          "overflow-hidden transition-[max-height,opacity] duration-400 lg:hidden",
-          open ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0",
+          "transition-[max-height,opacity] duration-400 lg:hidden",
+          open
+            ? "max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain opacity-100"
+            : "max-h-0 overflow-hidden opacity-0",
         )}
       >
-        <ul className="mx-4 mt-3 space-y-1 rounded-2xl border border-border bg-card p-3 text-foreground shadow-card">
-          {links.map((l) => (
-            <li key={l.to}>
-              <Link
-                onClick={() => setOpen(false)}
-                to={l.to}
-                className="block rounded-xl px-3 py-2.5 font-medium hover:bg-secondary"
-              >
-                {l.label}
-              </Link>
-            </li>
-          ))}
-          <li>
+        <div className="mx-4 my-3 rounded-2xl border border-border bg-card p-3 text-foreground shadow-card">
+          <ul className="grid grid-cols-2 gap-1">
+            {links.map((l) => (
+              <li key={l.to}>
+                <Link
+                  onClick={() => setOpen(false)}
+                  to={l.to}
+                  className="block rounded-xl px-3 py-2.5 text-[0.95rem] font-medium hover:bg-secondary"
+                  activeProps={{ className: "bg-secondary text-primary font-bold" }}
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-3">
             <Link
               onClick={() => setOpen(false)}
-              to="/app"
-              className="block rounded-xl px-3 py-2.5 font-medium hover:bg-secondary"
+              to="/auth"
+              search={{ mode: "signin" as const }}
+              className="block rounded-xl border border-border px-3 py-2.5 text-center font-bold hover:bg-secondary"
             >
-              جرّب الموظفين
+              تسجيل الدخول
             </Link>
-          </li>
-          <li>
             <Link
               onClick={() => setOpen(false)}
               to="/auth"
               search={{ mode: "signup" as const }}
-              className="mt-1 block rounded-xl bg-foreground px-3 py-2.5 text-center font-bold text-background"
+              className="block rounded-xl bg-foreground px-3 py-2.5 text-center font-bold text-background"
             >
               أنشئ حسابك
             </Link>
-          </li>
-        </ul>
+            <Link
+              onClick={() => setOpen(false)}
+              to="/app"
+              className="col-span-2 block rounded-xl px-3 py-2.5 text-center font-bold text-primary-foreground"
+              style={{ backgroundImage: "var(--gradient-aurora)" }}
+            >
+              جرّب الموظفين مجانًا الآن ←
+            </Link>
+          </div>
+        </div>
       </div>
     </header>
   );
