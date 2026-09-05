@@ -22,8 +22,11 @@ const OPENROUTER = "https://openrouter.ai/api/v1/chat/completions";
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const LOVABLE = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-/** نماذج بوابة Lovable المدمجة (لا تحتاج مفتاحاً من المستخدم). */
-export const LOVABLE_MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+/** نماذج بوابة Lovable المدمجة (لا تحتاج مفتاحاً من المستخدم) — الأقوى أولاً ثم الاحتياطي. */
+export const LOVABLE_MODELS = ["openai/gpt-5.6-sol", "google/gemini-2.5-flash"];
+
+/** عائلة GPT-5 ترفض max_tokens وتحتاج مهلة أطول؛ حدّ الطول يُذكر في التعليمات بدلاً منه. */
+const isGpt5 = (model: string) => /(^|\/)gpt-5/.test(model);
 
 /** نماذج Google AI Studio (المزوّد الأساسي) بالترتيب. */
 // flash-lite أولاً: يردّ في ~7 ثوانٍ بجودة قريبة، بينما 3.6-flash يتجاوز 50 ثانية
@@ -42,7 +45,6 @@ export const FREE_MODELS = [
   "z-ai/glm-5.2:free",
 ];
 
-
 export type ChatOptions = {
   json?: boolean;
   /** مهلة كل نموذج بالمللي ثانية (تمنع التعليق نهائياً). */
@@ -59,7 +61,9 @@ export class DailyFreeLimitError extends Error {
   constructor(resetAt?: number) {
     super(
       `استُهلك الحد اليومي المجاني على OpenRouter (50 طلباً/يوم).${
-        resetAt ? ` يتجدّد في ${new Date(resetAt).toISOString().replace("T", " ").slice(0, 16)} UTC.` : ""
+        resetAt
+          ? ` يتجدّد في ${new Date(resetAt).toISOString().replace("T", " ").slice(0, 16)} UTC.`
+          : ""
       } أضف 10 أرصدة لرفع الحد إلى 1000 طلب/يوم، أو انتظر التجديد.`,
     );
     this.name = "DailyFreeLimitError";
@@ -135,10 +139,12 @@ async function callOpenAICompatible(
       // بدون هذا يستهلك gemini-3.6-flash دقائق في "التفكير" ويقطع الرد.
       reasoning_effort: "low",
       ...(options.json ? { response_format: { type: "json_object" } } : {}),
-      max_tokens: options.maxTokens ?? 1800,
+      ...(isGpt5(model) ? {} : { max_tokens: options.maxTokens ?? 1800 }),
       messages,
     }),
-    signal: AbortSignal.timeout(options.timeoutMs ?? 30_000),
+    signal: AbortSignal.timeout(
+      isGpt5(model) ? Math.max(options.timeoutMs ?? 0, 90_000) : (options.timeoutMs ?? 30_000),
+    ),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -174,12 +180,16 @@ async function freeChatInner(
   const keys = await providerKeys();
   const apiKey = keys.openrouter || keyHint;
 
-
   /** ضغط الطلبات المتوازية يرجع 429/503 مؤقتاً — نعيد المحاولة بتأخير متصاعد
    *  قبل الانتقال لمزوّد آخر، حتى لا يرى المستخدم فشلاً بلا سبب. */
   const transient = (m: string) =>
-    m.includes("429") || m.includes("503") || m.includes("502") || m.includes("overloaded") ||
-    m.includes("UNAVAILABLE") || m.includes("timed out") || m.includes("aborted");
+    m.includes("429") ||
+    m.includes("503") ||
+    m.includes("502") ||
+    m.includes("overloaded") ||
+    m.includes("UNAVAILABLE") ||
+    m.includes("timed out") ||
+    m.includes("aborted");
 
   async function withRetry(fn: () => Promise<string>, tries = 4): Promise<string> {
     for (let attempt = 0; ; attempt++) {
@@ -221,18 +231,17 @@ async function freeChatInner(
 
   if (!apiKey) throw new Error(`تعذّر توليد الرد (${lastError || "لا يوجد مزوّد مهيأ"}).`);
 
-
-
   const pool = FREE_MODELS.filter((m) => !unavailable.has(m)).slice(
     0,
     options.attempts ?? FREE_MODELS.length,
   );
 
-
   if (options.race !== false && pool.length > 1) {
     // أول نموذجين بالتوازي: يقلّل زمن الانتظار إلى أسرع نموذج متاح لحظياً.
     try {
-      return await Promise.any(pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, options)));
+      return await Promise.any(
+        pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, options)),
+      );
     } catch (error) {
       const errors = ((error as AggregateError).errors ?? []) as Error[];
       const fatal = errors.find(
@@ -246,7 +255,6 @@ async function freeChatInner(
   for (const model of pool.slice(options.race === false ? 0 : 2)) {
     try {
       return await withRetry(() => callModel(apiKey, model, messages, options), 3);
-
     } catch (error) {
       // حد يومي أو مفتاح خاطئ: التوقف فوراً بدل استنزاف الوقت في نماذج ستفشل بنفس السبب.
       if (error instanceof DailyFreeLimitError) throw error;
@@ -257,8 +265,6 @@ async function freeChatInner(
   }
   throw new Error(`تعذّر توليد الرد من النماذج المجانية (${lastError}).`);
 }
-
-
 
 export function parseJson<T>(raw: string): T | null {
   const cleaned = raw
@@ -320,22 +326,20 @@ export async function planResearch(
 export type Evidence = { block: string; sources: string[]; used: string[] };
 
 /** المرحلة الثانية: تنفيذ البحث من مصادر مجانية وبناء كتلة أدلة للنموذج. */
-export async function gatherEvidence(
-  plan: ResearchPlan,
-  workspaceId: string,
-): Promise<Evidence> {
-  const [keywordSets, metricSets, serpSets, audits, inventories, gsc, ga4, brief] = await Promise.all([
-    Promise.all((plan.keywords ?? []).map((k) => keywordExpansion(k))),
-    Promise.all((plan.keywords ?? []).slice(0, 3).map((k) => keywordMetrics(k))),
-    Promise.all((plan.searches ?? []).map(async (q) => ({ q, results: await serpSearch(q) }))),
-    Promise.all((plan.urls ?? []).map((u) => auditPage(u))),
-    Promise.all((plan.competitors ?? []).map((d) => competitorInventory(d))),
-    plan.useSearchConsole ? gscSnapshotFor(workspaceId) : Promise.resolve(null),
-    plan.useSearchConsole ? ga4SnapshotFor(workspaceId) : Promise.resolve(null),
-    (plan.searches ?? [])[0]
-      ? contentBrief((plan.searches ?? [])[0]!, (plan.urls ?? [])[0])
-      : Promise.resolve(null),
-  ]);
+export async function gatherEvidence(plan: ResearchPlan, workspaceId: string): Promise<Evidence> {
+  const [keywordSets, metricSets, serpSets, audits, inventories, gsc, ga4, brief] =
+    await Promise.all([
+      Promise.all((plan.keywords ?? []).map((k) => keywordExpansion(k))),
+      Promise.all((plan.keywords ?? []).slice(0, 3).map((k) => keywordMetrics(k))),
+      Promise.all((plan.searches ?? []).map(async (q) => ({ q, results: await serpSearch(q) }))),
+      Promise.all((plan.urls ?? []).map((u) => auditPage(u))),
+      Promise.all((plan.competitors ?? []).map((d) => competitorInventory(d))),
+      plan.useSearchConsole ? gscSnapshotFor(workspaceId) : Promise.resolve(null),
+      plan.useSearchConsole ? ga4SnapshotFor(workspaceId) : Promise.resolve(null),
+      (plan.searches ?? [])[0]
+        ? contentBrief((plan.searches ?? [])[0]!, (plan.urls ?? [])[0])
+        : Promise.resolve(null),
+    ]);
 
   const parts: string[] = [];
   const sources: string[] = [];
@@ -366,7 +370,9 @@ export async function gatherEvidence(
         ...metricSets.map((m) =>
           [
             `- «${m.keyword}»: مؤشر طلب ${m.demandScore}/100 (عمق اقتراحات ${m.suggestionDepth}${m.autocompleted ? "، تظهر في الإكمال التلقائي" : ""})`,
-            m.difficultyScore !== null ? `  صعوبة تقديرية ${m.difficultyScore}/100 | نطاقات متصدرة: ${m.topDomains.join(", ")}` : "  صعوبة: غير متاحة الآن (لا تخمين)",
+            m.difficultyScore !== null
+              ? `  صعوبة تقديرية ${m.difficultyScore}/100 | نطاقات متصدرة: ${m.topDomains.join(", ")}`
+              : "  صعوبة: غير متاحة الآن (لا تخمين)",
             m.wikipediaMonthlyViews !== null
               ? `  اهتمام مقيس: مقال ويكيبيديا «${m.wikipediaArticle}» ≈ ${m.wikipediaMonthlyViews} مشاهدة/شهر`
               : "",
@@ -419,7 +425,10 @@ export async function gatherEvidence(
             `### جرد محتوى المنافس ${inv.domain} (من خريطة الموقع)`,
             `- عدد الصفحات المكتشفة: ${inv.urlCount}`,
             `- أكثر الكلمات تكراراً في عناوين الروابط: ${inv.topics.join(" | ")}`,
-            `- نماذج صفحات: ${inv.samples.map((s) => s.slug || s.url).slice(0, 15).join(" | ")}`,
+            `- نماذج صفحات: ${inv.samples
+              .map((s) => s.slug || s.url)
+              .slice(0, 15)
+              .join(" | ")}`,
           ].join("\n"),
     );
     if (!inv.error) sources.push(inv.domain);
@@ -471,7 +480,9 @@ export async function gatherEvidence(
         brief.commonTerms.length
           ? `- مصطلحات/كيانات يغطيها المتصدرون: ${brief.commonTerms.map((t) => `${t.term} (${t.pages})`).join(" | ")}`
           : "",
-        brief.entityGaps.length ? `- فجوات في صفحتك يجب تغطيتها: ${brief.entityGaps.join(" | ")}` : "",
+        brief.entityGaps.length
+          ? `- فجوات في صفحتك يجب تغطيتها: ${brief.entityGaps.join(" | ")}`
+          : "",
         brief.headingIdeas.length
           ? `- عناوين فرعية مستخدمة فعلاً: ${brief.headingIdeas.slice(0, 12).join(" | ")}`
           : "",

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -349,12 +349,17 @@ function ChatPage() {
                       )}
                     >
                       {isUser ? <p dir="auto">{m.body}</p> : <Markdown body={body} />}
-                      {!isUser &&
-                      id === "nour" &&
-                      workspace &&
-                      wpConnected &&
-                      m.body.length > 200 ? (
-                        <PublishToWordPress workspaceId={workspace.id} body={m.body} />
+                      {!isUser && id === "nour" && workspace && m.body.length > 600 ? (
+                        wpConnected ? (
+                          <PublishToWordPress workspaceId={workspace.id} body={m.body} />
+                        ) : (
+                          <Link
+                            to="/app/integrations"
+                            className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-secondary"
+                          >
+                            <Link2 className="size-3.5" /> اربط ووردبريس لنشر المقال كمسودة بضغطة
+                          </Link>
+                        )
                       ) : null}
                       {!isUser && id === "sonny" && workspace && looksPostable(m.body) ? (
                         <PublishPanel
