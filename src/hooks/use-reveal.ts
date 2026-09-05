@@ -1,17 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 
-/** Reveals an element on first scroll into view (Stripe-style staged entrance). */
+/**
+ * Reveals an element on first scroll into view (Stripe-style staged entrance).
+ * Content is visible in the server HTML (SEO + no blank page before hydration);
+ * only elements below the fold are hidden after mount and revealed on scroll.
+ */
 export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.15) {
   const ref = useRef<T | null>(null);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(true);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || shown) return;
-    if (typeof IntersectionObserver === "undefined") {
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    // Anything already inside the first viewport stays visible (hero, badge…)
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
       setShown(true);
       return;
     }
+
+    setShown(false);
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -25,7 +36,7 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [shown, threshold]);
+  }, [threshold]);
 
   return { ref, shown };
 }

@@ -1,3 +1,4 @@
+import { Star } from "lucide-react";
 import { Reveal } from "@/components/Reveal";
 
 const quotes = [
@@ -29,7 +30,8 @@ export function Testimonials() {
     <section className="overflow-hidden py-20">
       <div className="mx-auto max-w-6xl px-5">
         <Reveal>
-          <h2 className="max-w-2xl font-display text-4xl leading-tight font-black md:text-5xl">
+          <p className="text-sm font-bold tracking-wider text-primary">آراء العملاء</p>
+          <h2 className="mt-3 max-w-2xl font-display text-4xl leading-tight font-black md:text-5xl">
             أصحاب مشاريع يشتغلون بفريق <span className="text-gradient">أصغر وأسرع</span>
           </h2>
         </Reveal>
@@ -41,7 +43,12 @@ export function Testimonials() {
               key={`${t.n}-${i}`}
               className="w-[22rem] shrink-0 rounded-3xl border border-border bg-card p-7 shadow-card"
             >
-              <blockquote className="text-lg leading-relaxed">”{t.q}“</blockquote>
+              <div className="flex gap-0.5 text-amber" aria-label="تقييم 5 من 5">
+                {Array.from({ length: 5 }).map((_, k) => (
+                  <Star key={k} className="size-4 fill-current" strokeWidth={0} />
+                ))}
+              </div>
+              <blockquote className="mt-4 text-lg leading-relaxed">«{t.q}»</blockquote>
               <figcaption className="mt-5 flex items-center gap-3">
                 <span
                   className="grid size-10 place-items-center rounded-full font-display font-black text-background"
