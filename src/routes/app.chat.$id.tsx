@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2 } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2, Fingerprint } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
 import { getMember } from "@/data/team";
 import { integrationStatusLabel } from "@/data/app";
-import { useIntegrations, useMessages, useWorkspace } from "@/lib/data";
+import { useBrainItems, useIntegrations, useMessages, useWorkspace } from "@/lib/data";
 import { askEmployee, runSkill } from "@/lib/ai.functions";
 import { SkillPalette } from "@/components/app/SkillPalette";
 import { Thinking } from "@/components/app/Thinking";
