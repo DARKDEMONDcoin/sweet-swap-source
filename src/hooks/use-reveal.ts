@@ -12,6 +12,12 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.
       setShown(true);
       return;
     }
+    // Anything already inside the first viewport shows immediately (hero, nav badge…)
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setShown(true);
+      return;
+    }
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -24,7 +30,12 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.
       { threshold, rootMargin: "0px 0px -8% 0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
+    // Safety net: never leave content invisible if the observer never fires.
+    const fallback = window.setTimeout(() => setShown(true), 2500);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, [shown, threshold]);
 
   return { ref, shown };
