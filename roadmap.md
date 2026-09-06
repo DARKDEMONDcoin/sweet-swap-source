@@ -1,8 +1,11 @@
 # Roadmap
 
-- [ ] 1. Employee intelligence: integration-request logic (when to ask), best system prompts, team awareness + full site awareness
-- [ ] 2. Rankings page (app.rankings) shows fake data → real SERP-based tracking with useful data
-- [ ] 3. Site understands the user's business/site (profiling, suggestions) — onboarding + brain
-- [ ] 4. Google data section (reports: GSC/GA4) broken → fix via Pipedream / Google keys in Supabase
-- [ ] 5. Generated images render as prompt text instead of image → fix
+- [x] 1. Employee intelligence: JIT integration policy, personas, team awareness
+- [x] 2. Rankings: real sources (GSC → Google → estimate), labelled
+- [x] 3. Business profiling from URL (onboarding, overview, brain)
+- [ ] 4. Google data section in reports (GSC/GA4 via Pipedream) → fix + connect CTA
+- [x] 5. Chat images render as real images
+- [ ] 6. Siraj (sonny) full workflow: content calendar with generated posts + images, ready → one-click publish (Marblism Sonny parity+)
+- [ ] 7. Morning briefing (Eva): daily digest
+- [ ] 8. Learn from performance (Siraj): feed top-performing posts back into generation
 - [ ] Final: review, preview, test
