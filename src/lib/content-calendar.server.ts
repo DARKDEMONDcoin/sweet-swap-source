@@ -196,7 +196,7 @@ function tzOffsetMinutes(tz: string, at: Date): number {
     const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(at);
     const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT+3";
     const m = name.match(/([+-])(\d{1,2})(?::?(\d{2}))?/);
-    if (!m) return 180;
+    if (!m) return /^(GMT|UTC)$/i.test(name.trim()) ? 0 : 180;
     const sign = m[1] === "-" ? -1 : 1;
     return sign * (Number(m[2]) * 60 + Number(m[3] ?? 0));
   } catch {
