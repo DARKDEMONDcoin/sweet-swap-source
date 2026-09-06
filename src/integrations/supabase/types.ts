@@ -138,6 +138,41 @@ export type Database = {
           },
         ]
       }
+      briefings: {
+        Row: {
+          content: Json
+          created_at: string
+          day: string
+          employee_id: string
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          day?: string
+          employee_id?: string
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          day?: string
+          employee_id?: string
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_credentials: {
         Row: {
           config: Json
@@ -485,6 +520,8 @@ export type Database = {
           image_url: string | null
           last_error: string | null
           locked_at: string | null
+          meta: Json
+          metrics: Json | null
           provider: string
           published_at: string | null
           remote_ref: string | null
@@ -503,6 +540,8 @@ export type Database = {
           image_url?: string | null
           last_error?: string | null
           locked_at?: string | null
+          meta?: Json
+          metrics?: Json | null
           provider: string
           published_at?: string | null
           remote_ref?: string | null
@@ -521,6 +560,8 @@ export type Database = {
           image_url?: string | null
           last_error?: string | null
           locked_at?: string | null
+          meta?: Json
+          metrics?: Json | null
           provider?: string
           published_at?: string | null
           remote_ref?: string | null

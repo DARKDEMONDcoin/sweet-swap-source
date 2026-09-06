@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plane, Play, Save, TriangleAlert } from "lucide-react";
+import { CalendarDays, ListChecks, Loader2, Plane, Play, Save, TriangleAlert } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -151,6 +151,16 @@ function AutopilotPage() {
     <AppShell
       title="الطيار الآلي"
       lead="سِراج يكتب وينشر لوحده — أنت تحدّد المنصات والمواعيد والأسلوب فقط."
+      actions={
+        <div className="flex gap-2">
+          <Link to="/app/calendar" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-bold hover:bg-secondary">
+            <CalendarDays className="size-4" /> التقويم
+          </Link>
+          <Link to="/app/queue" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-bold hover:bg-secondary">
+            <ListChecks className="size-4" /> الطابور
+          </Link>
+        </div>
+      }
     >
       {error ? (
         <p className="mb-4 rounded-2xl bg-destructive/10 p-4 text-sm font-bold text-destructive">{error}</p>

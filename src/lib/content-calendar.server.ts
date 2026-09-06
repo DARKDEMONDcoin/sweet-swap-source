@@ -420,8 +420,14 @@ export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "Ø
     ],
     { json: true, timeoutMs: 40_000, maxTokens: 600 },
   );
-  const ideas = extractJson<{ title: string; hook: string; provider: string }[]>(raw) ?? [];
-  return ideas.slice(0, 3).map((i) => ({
+  type Idea = { title: string; hook: string; provider: string };
+  const parsed = extractJson<Idea[] | Record<string, unknown>>(raw);
+  const ideas: Idea[] = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === "object"
+      ? ((Object.values(parsed).find((v) => Array.isArray(v)) as Idea[] | undefined) ?? [])
+      : [];
+  return ideas.filter((i) => i && (i.title || i.hook)).slice(0, 3).map((i) => ({
     title: String(i.title ?? "").slice(0, 100),
     hook: String(i.hook ?? "").slice(0, 160),
     provider: String(i.provider ?? "instagram"),

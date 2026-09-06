@@ -43,13 +43,30 @@ async function runReport(
 }
 
 /** لقطة GA4 داخلية لنور — ترجع null إن لم يكن الربط جاهزاً. */
-export async function ga4SnapshotFor(
+export async function ga4SnapshotFor(workspaceId: string, days = 28): Promise<Ga4Snapshot | null> {
+  return (await ga4SnapshotDetailed(workspaceId, days)).snapshot;
+}
+
+/** لقطة GA4 مع حالة صريحة بدل null الصامت. */
+export async function ga4SnapshotDetailed(
   workspaceId: string,
   days = 28,
-): Promise<Ga4Snapshot | null> {
+): Promise<{ status: import("./gsc.functions").SourceStatus; snapshot: Ga4Snapshot | null }> {
   try {
+    const { hasGoogleAccount } = await import("./gsc.functions");
+    if (!(await hasGoogleAccount(workspaceId, "analytics"))) {
+      return {
+        status: { state: "not_connected", message: "Google Analytics 4 غير مربوط — اربط حساب Google من صفحة التكاملات." },
+        snapshot: null,
+      };
+    }
     const { propertyId } = await loadGa4Config(workspaceId);
-    if (!propertyId) return null;
+    if (!propertyId) {
+      return {
+        status: { state: "not_selected", message: "الحساب مربوط لكن لم تختر خاصية GA4 بعد — اختر الخاصية من صفحة التكاملات." },
+        snapshot: null,
+      };
+    }
     const start = `${days}daysAgo`;
     const end = "yesterday";
     const dateRanges = [{ startDate: start, endDate: end }];
@@ -84,7 +101,7 @@ export async function ga4SnapshotFor(
     const num = (v?: string) => Number(v ?? 0) || 0;
     const t = totals.rows?.[0]?.metricValues ?? [];
 
-    return {
+    const snapshot: Ga4Snapshot = {
       property: propertyId,
       range: { start, end },
       totals: {
@@ -101,8 +118,14 @@ export async function ga4SnapshotFor(
         sessions: num(r.metricValues?.[0]?.value),
       })),
     };
-  } catch {
-    return null;
+    return { status: { state: "ok", message: `GA4 · ${propertyId}` }, snapshot };
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    const message = /401|403|invalid_grant|unauth|PERMISSION_DENIED/i.test(raw)
+      ? "انتهت صلاحية ربط Google أو لا تملك صلاحية على هذه الخاصية — أعد ربط Analytics من صفحة التكاملات."
+      : `تعذّر جلب بيانات GA4: ${raw.slice(0, 160)}`;
+    console.error("[ga4] snapshot failed", raw);
+    return { status: { state: "error", message }, snapshot: null };
   }
 }
 

@@ -3,6 +3,7 @@ import { CheckCheck, ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { BusinessProfileCard } from "@/components/app/BusinessProfileCard";
+import { MorningBriefingCard } from "@/components/app/MorningBriefingCard";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
 import { getMember } from "@/data/team";
 import { taskStatusLabel } from "@/data/app";
@@ -80,6 +81,8 @@ function AppHome() {
           </div>
         ))}
       </div>
+
+      {workspace ? <MorningBriefingCard className="mt-6" workspaceId={workspace.id} /> : null}
 
       {workspace ? (
         <BusinessProfileCard

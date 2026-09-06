@@ -26,6 +26,10 @@ export type ReportPayload = {
   work: { published: number; awaiting: number; recent: { title: string; created_at: string }[] };
   opportunities: { query: string; reason: string }[];
   notes: string[];
+  sources: {
+    search: { state: "ok" | "not_connected" | "not_selected" | "error"; message: string };
+    analytics: { state: "ok" | "not_connected" | "not_selected" | "error"; message: string };
+  };
 };
 
 export const buildReport = createServerFn({ method: "POST" })
@@ -42,12 +46,12 @@ export const buildReport = createServerFn({ method: "POST" })
     if (wsError) throw new Error(wsError.message);
     if (!workspace) throw new Error("مساحة العمل غير موجودة.");
 
-    const { gscSnapshotFor } = await import("./gsc.functions");
-    const { ga4SnapshotFor } = await import("./ga4.functions");
+    const { gscSnapshotDetailed } = await import("./gsc.functions");
+    const { ga4SnapshotDetailed } = await import("./ga4.functions");
 
-    const [gsc, ga4, tasks] = await Promise.all([
-      gscSnapshotFor(data.workspaceId, data.days),
-      ga4SnapshotFor(data.workspaceId, data.days),
+    const [gscRes, ga4Res, tasks] = await Promise.all([
+      gscSnapshotDetailed(data.workspaceId, data.days),
+      ga4SnapshotDetailed(data.workspaceId, data.days),
       context.supabase
         .from("tasks")
         .select("title, status, created_at")
@@ -55,11 +59,13 @@ export const buildReport = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(40),
     ]);
+    const gsc = gscRes.snapshot;
+    const ga4 = ga4Res.snapshot;
 
     const rows = tasks.data ?? [];
     const notes: string[] = [];
-    if (!gsc) notes.push("Search Console غير مربوط — بيانات البحث غير متاحة في هذا التقرير.");
-    if (!ga4) notes.push("Google Analytics 4 غير مربوط — بيانات الزيارات غير متاحة.");
+    if (gscRes.status.state !== "ok") notes.push(gscRes.status.message);
+    if (ga4Res.status.state !== "ok") notes.push(ga4Res.status.message);
 
     const totals = gsc
       ? gsc.queries.reduce(
@@ -108,5 +114,6 @@ export const buildReport = createServerFn({ method: "POST" })
       },
       opportunities,
       notes,
+      sources: { search: gscRes.status, analytics: ga4Res.status },
     };
   });
