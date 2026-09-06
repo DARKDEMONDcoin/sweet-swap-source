@@ -10,7 +10,7 @@ export type Publishable = (typeof PUBLISHABLE)[number];
 const ALIASES: Record<string, RegExp> = {
   linkedin: /لينكد\s*ان|لينكدإن|لينكدين|لينكد|linked\s*in/i,
   instagram: /انستا|إنستا|انستجرام|إنستجرام|انستقرام|إنستقرام|instagram|insta\b|\big\b/i,
-  facebook: /فيس\s*بوك|فيسبوك|فيس\b|facebook|\bfb\b/i,
+  facebook: /فيس\s*بوك|فيسبوك|(?:^|\s|و|ال|لل|ع|على|علي)فيس(?:\s|$|[،,.و])|facebook|\bfb\b/i,
   x: /تويتر|إكس\b|اكس\b|twitter|\bx\.com|(?:^|\s)(?:على|علي|ع)\s*x(?:\s|$|[،,.])/i,
   pinterest: /بنترست|بينترست|pinterest/i,
   youtube: /يوتيوب|يوتوب|youtube|شورتس|shorts/i,
