@@ -99,13 +99,18 @@ export const askEmployee = createServerFn({ method: "POST" })
     const { memoryBlock } = await import("./memory.server");
     const brainText = memoryBlock(brain ?? [], data.message, 8);
 
+    const longForm =
+      /مقال|خطة\s*(سيو|محتوى|تسويق)|\d{3,4}\s*كلمة|صفحة هبوط|دليل شامل|حملة كاملة/.test(data.message) ||
+      data.message.length > 220;
+
     const research = await researchFor(
       data.employeeId,
       apiKey,
       { name: workspace.name, industry: workspace.industry },
       data.message,
       data.workspaceId,
-      12_000,
+      // الطلبات الكبيرة تستحق أدلة أكمل (مقاييس + نتائج بحث + موجز منافسين).
+      longForm ? 22_000 : 12_000,
     );
 
     const teamActivity = (recentTasks ?? [])
@@ -158,10 +163,6 @@ export const askEmployee = createServerFn({ method: "POST" })
       .slice()
       .reverse()
       .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.body }));
-
-    const longForm =
-      /مقال|خطة\s*(سيو|محتوى|تسويق)|\d{3,4}\s*كلمة|صفحة هبوط|دليل شامل|حملة كاملة/.test(data.message) ||
-      data.message.length > 220;
 
     const raw = await freeChat(
       apiKey,
