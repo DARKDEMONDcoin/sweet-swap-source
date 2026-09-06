@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, CheckCircle2, Loader2, RefreshCw, Send, Trash2, TriangleAlert } from "lucide-react";
+import { CalendarClock, CalendarDays, CheckCircle2, Loader2, RefreshCw, Send, Trash2, TriangleAlert } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -28,6 +28,9 @@ export const Route = createFileRoute("/app/queue")({
 
 const STATUS: Record<string, { label: string; className: string }> = {
   scheduled: { label: "مجدول", className: "bg-secondary text-ink-soft" },
+  idea: { label: "فكرة", className: "bg-amber/12 text-ink" },
+  draft: { label: "مسودة", className: "bg-amber/12 text-ink" },
+  publishing: { label: "ينشر الآن", className: "bg-jade/12 text-jade-deep" },
   published: { label: "منشور", className: "bg-jade/12 text-jade-deep" },
   failed: { label: "فشل", className: "bg-destructive/10 text-destructive" },
   cancelled: { label: "ملغى", className: "bg-secondary text-muted-foreground" },
@@ -66,6 +69,14 @@ function QueuePage() {
     <AppShell
       title="طابور النشر"
       lead={upcoming ? `${upcoming} منشوراً بانتظار موعده` : "لا منشورات مجدولة حالياً"}
+      actions={
+        <Link
+          to="/app/calendar"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-bold hover:bg-secondary"
+        >
+          <CalendarDays className="size-4" /> تقويم المحتوى
+        </Link>
+      }
     >
       {error ? (
         <p className="mb-4 rounded-2xl bg-destructive/10 p-4 text-sm font-bold text-destructive">{error}</p>
@@ -84,6 +95,9 @@ function QueuePage() {
           <p className="mt-2 text-ink-soft">
             اعتمد منشوراً من صفحة الموافقات واختر «جدولة» ليظهر هنا وينشر في موعده تلقائياً.
           </p>
+          <Link to="/app/calendar" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background">
+            <CalendarDays className="size-4" /> خطط أسبوعاً كاملاً مع سِراج
+          </Link>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -112,9 +126,19 @@ function QueuePage() {
                   ) : null}
                 </div>
 
-                <p className="mt-3 line-clamp-4 whitespace-pre-wrap leading-relaxed text-ink-soft">
-                  {p.body}
-                </p>
+                <div className="mt-3 flex gap-4">
+                  {p.image_url ? (
+                    <a href={p.image_url} target="_blank" rel="noreferrer" className="shrink-0">
+                      <img
+                        src={p.image_url}
+                        alt=""
+                        loading="lazy"
+                        className="size-24 rounded-2xl border border-border object-cover sm:size-28"
+                      />
+                    </a>
+                  ) : null}
+                  <p className="line-clamp-5 min-w-0 whitespace-pre-wrap leading-relaxed text-ink-soft">{p.body}</p>
+                </div>
 
                 {p.last_error ? (
                   <p className="mt-3 inline-flex items-start gap-2 rounded-xl bg-destructive/8 p-3 text-xs text-destructive">
