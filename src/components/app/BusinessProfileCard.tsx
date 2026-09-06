@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   workspaceId: string;
-  website?: string | null;
-  profile?: Partial<BusinessProfile> | null;
+  website?: string | null | undefined;
+  profile?: Partial<BusinessProfile> | null | undefined;
   /** يُستدعى بعد التحليل (الإعداد الأولي يملأ الحقول منه). */
   onProfiled?: (p: BusinessProfile, url: string) => void;
   compact?: boolean;
@@ -185,8 +185,8 @@ function Fact({
 }: {
   icon: typeof Store;
   label: string;
-  items?: string[];
-  ltr?: boolean;
+  items?: string[] | undefined;
+  ltr?: boolean | undefined;
 }) {
   if (!items?.length) return null;
   return (
