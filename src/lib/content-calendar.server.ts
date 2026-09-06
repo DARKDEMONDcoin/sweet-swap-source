@@ -472,13 +472,7 @@ export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "Ø
     { json: true, timeoutMs: 40_000, maxTokens: 600 },
   );
   type Idea = { title: string; hook: string; provider: string };
-  const parsed = extractJson<Idea[] | Record<string, unknown>>(raw);
-  const ideas: Idea[] = Array.isArray(parsed)
-    ? parsed
-    : parsed && typeof parsed === "object"
-      ? ((Object.values(parsed).find((v) => Array.isArray(v)) as Idea[] | undefined) ??
-        ("title" in parsed || "hook" in parsed ? [parsed as unknown as Idea] : []))
-      : [];
+  const ideas: Idea[] = extractJsonList<Idea>(raw, "title");
   if (!ideas.length) console.warn("[dailyIdeas] empty result; raw:", String(raw).slice(0, 300));
   return ideas.filter((i) => i && (i.title || i.hook)).slice(0, 3).map((i) => ({
     title: String(i.title ?? "").slice(0, 100),
