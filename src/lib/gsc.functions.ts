@@ -121,17 +121,45 @@ export type GscRow = {
   position: number;
 };
 
+export type GscSnapshot = { site: string; range: { start: string; end: string }; queries: GscRow[]; pages: GscRow[] };
+export type SourceState = "ok" | "not_connected" | "not_selected" | "error";
+export type SourceStatus = { state: SourceState; message: string };
+
+/** هل حساب Google المربوط عبر Pipedream موجود لهذا المزوّد؟ */
+export async function hasGoogleAccount(workspaceId: string, provider: "search-console" | "analytics") {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("pipedream_accounts")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("provider", provider)
+    .eq("status", "connected")
+    .maybeSingle();
+  return Boolean(data);
+}
+
 /**
- * لقطة Search Console للاستخدام الداخلي (بعد التحقق من الملكية عند المنادي).
- * ترجع null إن لم يكن الربط جاهزاً — حتى لا تتعطل المحادثة.
+ * لقطة Search Console مع حالة صريحة: غير مربوط / لم يُختر موقع / خطأ فعلي / جاهز.
+ * لا تبتلع الأخطاء — تعيدها كنص مفهوم للواجهة.
  */
-export async function gscSnapshotFor(
+export async function gscSnapshotDetailed(
   workspaceId: string,
   days = 28,
-): Promise<{ site: string; range: { start: string; end: string }; queries: GscRow[]; pages: GscRow[] } | null> {
+): Promise<{ status: SourceStatus; snapshot: GscSnapshot | null }> {
   try {
+    if (!(await hasGoogleAccount(workspaceId, "search-console"))) {
+      return {
+        status: { state: "not_connected", message: "Search Console غير مربوط — اربط حساب Google من صفحة التكاملات." },
+        snapshot: null,
+      };
+    }
     const config = await loadConfig(workspaceId);
-    if (!config.siteUrl) return null;
+    if (!config.siteUrl) {
+      return {
+        status: { state: "not_selected", message: "الحساب مربوط لكن لم تختر موقعاً بعد — اختر الموقع من صفحة التكاملات." },
+        snapshot: null,
+      };
+    }
     const { googleDataRequest } = await import("./google-data.server");
     const end = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
     const start = new Date(Date.now() - (days + 3) * 86_400_000).toISOString().slice(0, 10);
@@ -153,10 +181,23 @@ export async function gscSnapshotFor(
     };
 
     const [queries, pages] = await Promise.all([query("query"), query("page")]);
-    return { site: config.siteUrl, range: { start, end }, queries, pages };
-  } catch {
-    return null;
+    return {
+      status: { state: "ok", message: `Search Console · ${config.siteUrl}` },
+      snapshot: { site: config.siteUrl, range: { start, end }, queries, pages },
+    };
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    const message = /401|403|invalid_grant|unauth/i.test(raw)
+      ? "انتهت صلاحية ربط Google — أعد ربط Search Console من صفحة التكاملات."
+      : `تعذّر جلب بيانات Search Console: ${raw.slice(0, 160)}`;
+    console.error("[gsc] snapshot failed", raw);
+    return { status: { state: "error", message }, snapshot: null };
   }
+}
+
+/** لقطة Search Console للاستخدام الداخلي — ترجع null إن لم يكن الربط جاهزاً. */
+export async function gscSnapshotFor(workspaceId: string, days = 28): Promise<GscSnapshot | null> {
+  return (await gscSnapshotDetailed(workspaceId, days)).snapshot;
 }
 
 /** أعلى الاستعلامات والصفحات في آخر ٢٨ يوماً — بيانات حقيقية لنور. */
