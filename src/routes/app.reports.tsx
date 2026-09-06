@@ -113,13 +113,10 @@ function ReportsPage() {
             </p>
           </header>
 
-          {data.notes.length ? (
-            <ul className="mt-4 space-y-1.5 rounded-2xl bg-secondary/60 p-4 text-sm">
-              {data.notes.map((n) => (
-                <li key={n}>• {n}</li>
-              ))}
-            </ul>
-          ) : null}
+          <div className="mt-4 grid gap-3 md:grid-cols-2 print:hidden">
+            <SourceCard label="Google Search Console" status={data.sources.search} />
+            <SourceCard label="Google Analytics 4" status={data.sources.analytics} />
+          </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
