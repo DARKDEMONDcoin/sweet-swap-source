@@ -181,6 +181,8 @@ function ChatPage() {
   }, [prefill]);
   const [pending, setPending] = useState<string | null>(null);
   const [savedTask, setSavedTask] = useState(false);
+  /** طلب ربط سياقي: يظهر فقط عندما تحتاج المهمة الحالية حساباً غير مربوط. */
+  const [needsConnection, setNeedsConnection] = useState<{ provider: string; reason: string } | null>(null);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -207,6 +209,7 @@ function ChatPage() {
       setPending(null);
       setPendingText(null);
       setSavedTask(Boolean(res?.createdTaskId));
+      setNeedsConnection(res?.needsConnection ?? null);
       void qc.invalidateQueries({ queryKey: ["messages-last", workspace?.id] });
       void qc.invalidateQueries({ queryKey: ["tasks", workspace?.id] });
     },
@@ -444,6 +447,29 @@ function ChatPage() {
                 >
                   افتح الموافقات
                 </Link>
+              </div>
+            ) : null}
+
+            {needsConnection && !busy ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky/30 bg-sky/10 px-4 py-3 text-sm font-semibold animate-pop-in">
+                <AppIcon name={needsConnection.provider} className="size-6 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  لتنفيذ هذه المهمة فعلياً يحتاج {member.name} ربط{" "}
+                  <b>{appLabel(needsConnection.provider)}</b>
+                  {needsConnection.reason ? ` — ${needsConnection.reason}` : ""}. دقيقة واحدة عبر OAuth الرسمي.
+                </span>
+                <Link
+                  to="/app/integrations"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 text-xs font-bold text-background transition-transform hover:-translate-y-0.5"
+                >
+                  <Link2 className="size-3.5" /> اربط {appLabel(needsConnection.provider)}
+                </Link>
+                <button
+                  onClick={() => setNeedsConnection(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  لاحقاً
+                </button>
               </div>
             ) : null}
 
