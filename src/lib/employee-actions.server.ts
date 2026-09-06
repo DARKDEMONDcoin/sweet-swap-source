@@ -1,3 +1,4 @@
+import { employeeDirectory, type EmployeeId } from "./team-knowledge";
 /**
  * «الإجراءات الحقيقية» لكل موظف: بعد اعتمادك، ينفّذ الموظف الفعل نفسه
  * (إرسال بريد، حجز موعد، إضافة جهة اتصال أو صفقة، تسجيل صف في شيتس، رسالة سلاك…)
@@ -863,7 +864,11 @@ export const employeeActions: EmployeeActionDef[] = [
 const allActions: EmployeeActionDef[] = [...employeeActions, ...extraEmployeeActions];
 
 export function actionsFor(employeeId: string): EmployeeActionDef[] {
-  return allActions.filter((a) => a.employeeId === employeeId || a.employeeId === "*");
+  // الإجراءات المشتركة تظهر فقط لمنصات هذا الموظف — لا يرى سِراج أدوات سلاك/جيرا الخاصة بأمَل.
+  const own = new Set(employeeDirectory[employeeId as EmployeeId]?.integrations.map((i) => i.provider) ?? []);
+  return allActions.filter(
+    (a) => a.employeeId === employeeId || (a.employeeId === "*" && (own.size === 0 || own.has(a.provider))),
+  );
 }
 
 export function getEmployeeAction(id: string): EmployeeActionDef | undefined {
