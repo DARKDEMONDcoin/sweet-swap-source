@@ -7,6 +7,7 @@ import {
   CheckCheck,
   ListChecks,
   CalendarClock,
+  CalendarDays,
   LineChart,
   FileBarChart,
   BrainCircuit,
@@ -31,6 +32,7 @@ const nav = [
   { to: "/app", label: "النظرة العامة", icon: LayoutDashboard, exact: true },
   { to: "/app/chat", label: "المحادثات", icon: MessagesSquare },
   { to: "/app/approvals", label: "الموافقات", icon: CheckCheck },
+  { to: "/app/calendar", label: "تقويم المحتوى", icon: CalendarDays },
   { to: "/app/queue", label: "طابور النشر", icon: Send },
   { to: "/app/autopilot", label: "الطيار الآلي", icon: Plane },
 
