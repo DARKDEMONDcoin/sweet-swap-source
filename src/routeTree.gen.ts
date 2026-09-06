@@ -31,6 +31,7 @@ import { Route as AppApprovalsRouteImport } from './routes/app.approvals'
 import { Route as AppAutomationsRouteImport } from './routes/app.automations'
 import { Route as AppAutopilotRouteImport } from './routes/app.autopilot'
 import { Route as AppBrainRouteImport } from './routes/app.brain'
+import { Route as AppCalendarRouteImport } from './routes/app.calendar'
 import { Route as AppIntegrationsRouteImport } from './routes/app.integrations'
 import { Route as AppQueueRouteImport } from './routes/app.queue'
 import { Route as AppRankingsRouteImport } from './routes/app.rankings'
@@ -161,6 +162,11 @@ const AppBrainRoute = AppBrainRouteImport.update({
   path: '/brain',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   id: '/integrations',
   path: '/integrations',
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/app/automations': typeof AppAutomationsRoute
   '/app/autopilot': typeof AppAutopilotRoute
   '/app/brain': typeof AppBrainRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/integrations': typeof AppIntegrationsRoute
   '/app/queue': typeof AppQueueRoute
   '/app/rankings': typeof AppRankingsRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/app/automations': typeof AppAutomationsRoute
   '/app/autopilot': typeof AppAutopilotRoute
   '/app/brain': typeof AppBrainRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/integrations': typeof AppIntegrationsRoute
   '/app/queue': typeof AppQueueRoute
   '/app/rankings': typeof AppRankingsRoute
@@ -368,6 +376,7 @@ export interface FileRoutesById {
   '/app/automations': typeof AppAutomationsRoute
   '/app/autopilot': typeof AppAutopilotRoute
   '/app/brain': typeof AppBrainRoute
+  '/app/calendar': typeof AppCalendarRoute
   '/app/integrations': typeof AppIntegrationsRoute
   '/app/queue': typeof AppQueueRoute
   '/app/rankings': typeof AppRankingsRoute
@@ -413,6 +422,7 @@ export interface FileRouteTypes {
     | '/app/automations'
     | '/app/autopilot'
     | '/app/brain'
+    | '/app/calendar'
     | '/app/integrations'
     | '/app/queue'
     | '/app/rankings'
@@ -455,6 +465,7 @@ export interface FileRouteTypes {
     | '/app/automations'
     | '/app/autopilot'
     | '/app/brain'
+    | '/app/calendar'
     | '/app/integrations'
     | '/app/queue'
     | '/app/rankings'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/app/automations'
     | '/app/autopilot'
     | '/app/brain'
+    | '/app/calendar'
     | '/app/integrations'
     | '/app/queue'
     | '/app/rankings'
@@ -707,6 +719,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBrainRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/calendar': {
+      id: '/app/calendar'
+      path: '/calendar'
+      fullPath: '/app/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/integrations': {
       id: '/app/integrations'
       path: '/integrations'
@@ -848,6 +867,7 @@ interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppAutopilotRoute: typeof AppAutopilotRoute
   AppBrainRoute: typeof AppBrainRoute
+  AppCalendarRoute: typeof AppCalendarRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppQueueRoute: typeof AppQueueRoute
   AppRankingsRoute: typeof AppRankingsRoute
@@ -864,6 +884,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
   AppAutopilotRoute: AppAutopilotRoute,
   AppBrainRoute: AppBrainRoute,
+  AppCalendarRoute: AppCalendarRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppQueueRoute: AppQueueRoute,
   AppRankingsRoute: AppRankingsRoute,
