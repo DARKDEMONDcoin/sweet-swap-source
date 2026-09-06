@@ -164,7 +164,7 @@ export const refreshRankings = createServerFn({ method: "POST" })
           clicks: r.clicks ?? null,
           impressions: r.impressions ?? null,
           competitors: r.competitors,
-        });
+        } as never);
         await context.supabase
           .from("tracked_keywords")
           .update({ last_checked_at: now })
