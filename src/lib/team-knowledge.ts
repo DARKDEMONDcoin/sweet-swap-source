@@ -208,8 +208,8 @@ export function sharedSystemBlocks(params: {
   employeeId: string;
   connected: string[];
   profile?: unknown;
-  website?: string | null;
-  country?: string | null;
+  website?: string | null | undefined;
+  country?: string | null | undefined;
 }): string[] {
   return [
     operatingPrinciples,
