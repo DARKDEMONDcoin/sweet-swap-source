@@ -17,3 +17,5 @@
 - [x] Employee action panel limited to own tools
 - [ ] Nour hardest-request E2E via chat (next)
 - [ ] Publish so cron endpoints exist on production URL
+- [x] Nour hardest-request E2E: fixed 3-min hang (GPT-5 90s timeout retried) → total AI budget, no timeout retries, fast model first for long outputs; long-form 6000 tokens; JSON salvage; research budget 22s
+- [x] Briefing stats: Arabic zero rendered as a dot → western digits

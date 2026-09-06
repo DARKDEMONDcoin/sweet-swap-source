@@ -54,6 +54,8 @@ export type ChatOptions = {
   attempts?: number;
   /** نجرّب أول نموذجين بالتوازي: أول رد يفوز — أسرع زمن وصول ممكن. */
   race?: boolean;
+  /** الميزانية الزمنية الإجمالية لكل المزوّدات (افتراضياً 120 ثانية أو ضعف مهلة النموذج). */
+  budgetMs?: number;
 };
 
 /** خطأ حد الاستخدام اليومي المجاني على مستوى الحساب — لا فائدة من تجربة نماذج أخرى. */
@@ -175,21 +177,30 @@ async function freeChatInner(
   options: ChatOptions = {},
 ): Promise<string> {
   let lastError = "";
+  const started = Date.now();
+  /** ميزانية زمنية إجمالية: بعدها لا نجرّب مزوّداً جديداً حتى لا يعلّق الطلب دقائق. */
+  const budgetMs = options.budgetMs ?? Math.max(120_000, (options.timeoutMs ?? 30_000) * 2);
+  const remaining = () => budgetMs - (Date.now() - started);
+  const scoped = (): ChatOptions => ({
+    ...options,
+    timeoutMs: Math.max(5_000, Math.min(options.timeoutMs ?? 30_000, remaining())),
+  });
+  const outOfBudget = () => remaining() < 8_000;
 
   const { providerKeys } = await import("./provider-keys.server");
   const keys = await providerKeys();
   const apiKey = keys.openrouter || keyHint;
 
   /** ضغط الطلبات المتوازية يرجع 429/503 مؤقتاً — نعيد المحاولة بتأخير متصاعد
-   *  قبل الانتقال لمزوّد آخر، حتى لا يرى المستخدم فشلاً بلا سبب. */
+   *  قبل الانتقال لمزوّد آخر، حتى لا يرى المستخدم فشلاً بلا سبب.
+   *  المهلة المنتهية لا تُعاد على نفس النموذج: ستنتهي مجدداً وتُهدر الوقت. */
   const transient = (m: string) =>
     m.includes("429") ||
     m.includes("503") ||
     m.includes("502") ||
     m.includes("overloaded") ||
-    m.includes("UNAVAILABLE") ||
-    m.includes("timed out") ||
-    m.includes("aborted");
+    m.includes("UNAVAILABLE");
+  const timedOut = (m: string) => m.includes("timed out") || m.includes("aborted");
 
   async function withRetry(fn: () => Promise<string>, tries = 4): Promise<string> {
     for (let attempt = 0; ; attempt++) {
@@ -198,17 +209,22 @@ async function freeChatInner(
       } catch (error) {
         lastError = (error as Error).message;
         if (error instanceof DailyFreeLimitError) throw error;
-        if (attempt >= tries - 1 || !transient(lastError)) throw error;
+        if (attempt >= tries - 1 || timedOut(lastError) || !transient(lastError) || outOfBudget()) throw error;
         await new Promise((r) => setTimeout(r, 1200 * 2 ** attempt + Math.random() * 900));
       }
     }
   }
 
   if (keys.lovable) {
-    for (const model of LOVABLE_MODELS) {
+    // المخرجات الطويلة (مقال كامل): GPT-5 يتجاوز 90 ثانية ولا يقبل حدّ الطول — نبدأ بالنموذج السريع.
+    const long = (options.maxTokens ?? 1800) > 2500;
+    const order = long ? [...LOVABLE_MODELS].sort((a, b) => Number(isGpt5(a)) - Number(isGpt5(b))) : LOVABLE_MODELS;
+    for (const model of order) {
+      if (outOfBudget()) break;
+      if (long && isGpt5(model) && remaining() < 90_000) continue;
       try {
         return await withRetry(() =>
-          callOpenAICompatible(LOVABLE, keys.lovable!, model, messages, options),
+          callOpenAICompatible(LOVABLE, keys.lovable!, model, messages, scoped()),
         );
       } catch {
         /* المزوّد التالي */
@@ -219,15 +235,17 @@ async function freeChatInner(
   const geminiKey = keys.gemini;
   if (geminiKey) {
     for (const model of GEMINI_MODELS) {
+      if (outOfBudget()) break;
       try {
         return await withRetry(() =>
-          callOpenAICompatible(GEMINI, geminiKey, model, messages, options),
+          callOpenAICompatible(GEMINI, geminiKey, model, messages, scoped()),
         );
       } catch {
         /* المزوّد التالي */
       }
     }
   }
+  if (outOfBudget()) throw new Error(`تعذّر توليد الرد في الوقت المتاح (${lastError || "المزوّدات بطيئة"}).`);
 
   if (!apiKey) throw new Error(`تعذّر توليد الرد (${lastError || "لا يوجد مزوّد مهيأ"}).`);
 
@@ -240,7 +258,7 @@ async function freeChatInner(
     // أول نموذجين بالتوازي: يقلّل زمن الانتظار إلى أسرع نموذج متاح لحظياً.
     try {
       return await Promise.any(
-        pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, options)),
+        pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, scoped())),
       );
     } catch (error) {
       const errors = ((error as AggregateError).errors ?? []) as Error[];
@@ -253,8 +271,9 @@ async function freeChatInner(
   }
 
   for (const model of pool.slice(options.race === false ? 0 : 2)) {
+    if (outOfBudget()) break;
     try {
-      return await withRetry(() => callModel(apiKey, model, messages, options), 3);
+      return await withRetry(() => callModel(apiKey, model, messages, scoped()), 3);
     } catch (error) {
       // حد يومي أو مفتاح خاطئ: التوقف فوراً بدل استنزاف الوقت في نماذج ستفشل بنفس السبب.
       if (error instanceof DailyFreeLimitError) throw error;

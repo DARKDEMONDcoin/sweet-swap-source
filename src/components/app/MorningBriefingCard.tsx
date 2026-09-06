@@ -78,7 +78,7 @@ export function MorningBriefingCard({ workspaceId, className }: { workspaceId: s
             ].map((s) => (
               <div key={s.k} className="rounded-2xl bg-background/70 px-4 py-3">
                 <p className="text-[11px] text-muted-foreground">{s.k}</p>
-                <p className="font-display text-xl font-black">{s.v.toLocaleString("ar-EG")}</p>
+                <p className="font-display text-xl font-black">{s.v.toLocaleString("en-US")}</p>
               </div>
             ))}
           </div>
