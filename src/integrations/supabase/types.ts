@@ -326,25 +326,37 @@ export type Database = {
       rank_snapshots: {
         Row: {
           captured_at: string
+          clicks: number | null
+          competitors: Json | null
           id: string
+          impressions: number | null
           keyword_id: string
           position: number | null
+          source: string
           url: string | null
           workspace_id: string
         }
         Insert: {
           captured_at?: string
+          clicks?: number | null
+          competitors?: Json | null
           id?: string
+          impressions?: number | null
           keyword_id: string
           position?: number | null
+          source?: string
           url?: string | null
           workspace_id: string
         }
         Update: {
           captured_at?: string
+          clicks?: number | null
+          competitors?: Json | null
           id?: string
+          impressions?: number | null
           keyword_id?: string
           position?: number | null
+          source?: string
           url?: string | null
           workspace_id?: string
         }
@@ -594,6 +606,7 @@ export type Database = {
       tracked_keywords: {
         Row: {
           active: boolean
+          country: string
           created_at: string
           domain: string
           id: string
@@ -605,6 +618,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          country?: string
           created_at?: string
           domain: string
           id?: string
@@ -616,6 +630,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          country?: string
           created_at?: string
           domain?: string
           id?: string
@@ -638,36 +653,45 @@ export type Database = {
       workspaces: {
         Row: {
           banned_words: string[]
+          country: string | null
           created_at: string
           id: string
           industry: string
           initials: string
           name: string
           owner_id: string
+          profile: Json
           tone: string
           updated_at: string
+          website: string | null
         }
         Insert: {
           banned_words?: string[]
+          country?: string | null
           created_at?: string
           id?: string
           industry?: string
           initials?: string
           name: string
           owner_id: string
+          profile?: Json
           tone?: string
           updated_at?: string
+          website?: string | null
         }
         Update: {
           banned_words?: string[]
+          country?: string | null
           created_at?: string
           id?: string
           industry?: string
           initials?: string
           name?: string
           owner_id?: string
+          profile?: Json
           tone?: string
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
