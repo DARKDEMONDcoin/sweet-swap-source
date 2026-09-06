@@ -81,6 +81,8 @@ function AppHome() {
         ))}
       </div>
 
+      {workspace ? <MorningBriefingCard className="mt-6" workspaceId={workspace.id} /> : null}
+
       {workspace ? (
         <BusinessProfileCard
           className="mt-6"
