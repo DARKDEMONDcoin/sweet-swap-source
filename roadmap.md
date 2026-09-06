@@ -21,10 +21,9 @@
 - [x] Briefing stats: Arabic zero rendered as a dot → western digits
 
 ## Round 3 (user request 12:01)
-- [ ] Chat: publish target must follow the platform the user names (LinkedIn ≠ Facebook) + connection check
-- [ ] Facebook "المنصة رفضت الطلب" after connecting page — diagnose real Graph error and surface it
-- [ ] Image prompts tied to the actual topic/reply (topic-anchored image_prompt)
-- [ ] Real info for Nour/Siraj (live research evidence in chat)
-- [ ] Chat can trigger section features (calendar plan, schedule, queue) from chat
-- [ ] User freedom: edit text manually, toggle image, pick time/quantity, attach own image/video; message actions (copy/share/regenerate)
-- [ ] Test everything E2E
+- [x] Chat: publish target follows the platform the user names (platforms.ts; no silent fallback; connect chip)
+- [x] Facebook rejection: root cause = read-only scopes (pages_show_list only). Preflight scope check + Arabic explanation + sync warning; custom Meta OAuth client via secret PIPEDREAM_OAUTH_APP_FACEBOOK
+- [x] Image director (imageBrief) anchored on user request + post text; enhance=false
+- [x] Chat tools: SEO audit, rank check, calendar plan, daily ideas, performance learning run for real from chat
+- [x] PublishPanel: manual edit, keep/remove generated image, upload image/video from device, multi-slot scheduling; message actions copy/share/download/edit/regenerate
+- [ ] E2E browser test of new PublishPanel + Facebook relink with publish scopes (needs Meta OAuth client / user relink)
