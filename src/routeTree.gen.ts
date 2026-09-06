@@ -44,6 +44,7 @@ import { Route as EmployeesIndexRouteImport } from './routes/employees.index'
 import { Route as EmployeesIdRouteImport } from './routes/employees.$id'
 import { Route as UseCasesIndexRouteImport } from './routes/use-cases.index'
 import { Route as UseCasesIdRouteImport } from './routes/use-cases.$id'
+import { Route as ApiPublicMorningBriefingRouteImport } from './routes/api/public/morning-briefing'
 import { Route as ApiPublicNourAutomationsRouteImport } from './routes/api/public/nour-automations'
 import { Route as ApiPublicNourWeeklyRouteImport } from './routes/api/public/nour-weekly'
 import { Route as ApiPublicPipedreamWebhookRouteImport } from './routes/api/public/pipedream-webhook'
@@ -227,6 +228,12 @@ const UseCasesIdRoute = UseCasesIdRouteImport.update({
   path: '/use-cases/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMorningBriefingRoute =
+  ApiPublicMorningBriefingRouteImport.update({
+    id: '/api/public/morning-briefing',
+    path: '/api/public/morning-briefing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicNourAutomationsRoute =
   ApiPublicNourAutomationsRouteImport.update({
     id: '/api/public/nour-automations',
@@ -302,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/employees/': typeof EmployeesIndexRoute
   '/use-cases/': typeof UseCasesIndexRoute
+  '/api/public/morning-briefing': typeof ApiPublicMorningBriefingRoute
   '/api/public/nour-automations': typeof ApiPublicNourAutomationsRoute
   '/api/public/nour-weekly': typeof ApiPublicNourWeeklyRoute
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
@@ -345,6 +353,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/employees': typeof EmployeesIndexRoute
   '/use-cases': typeof UseCasesIndexRoute
+  '/api/public/morning-briefing': typeof ApiPublicMorningBriefingRoute
   '/api/public/nour-automations': typeof ApiPublicNourAutomationsRoute
   '/api/public/nour-weekly': typeof ApiPublicNourWeeklyRoute
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
@@ -390,6 +399,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/employees/': typeof EmployeesIndexRoute
   '/use-cases/': typeof UseCasesIndexRoute
+  '/api/public/morning-briefing': typeof ApiPublicMorningBriefingRoute
   '/api/public/nour-automations': typeof ApiPublicNourAutomationsRoute
   '/api/public/nour-weekly': typeof ApiPublicNourWeeklyRoute
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/employees/'
     | '/use-cases/'
+    | '/api/public/morning-briefing'
     | '/api/public/nour-automations'
     | '/api/public/nour-weekly'
     | '/api/public/pipedream-webhook'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/employees'
     | '/use-cases'
+    | '/api/public/morning-briefing'
     | '/api/public/nour-automations'
     | '/api/public/nour-weekly'
     | '/api/public/pipedream-webhook'
@@ -523,6 +535,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/employees/'
     | '/use-cases/'
+    | '/api/public/morning-briefing'
     | '/api/public/nour-automations'
     | '/api/public/nour-weekly'
     | '/api/public/pipedream-webhook'
@@ -556,6 +569,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   EmployeesIndexRoute: typeof EmployeesIndexRoute
   UseCasesIndexRoute: typeof UseCasesIndexRoute
+  ApiPublicMorningBriefingRoute: typeof ApiPublicMorningBriefingRoute
   ApiPublicNourAutomationsRoute: typeof ApiPublicNourAutomationsRoute
   ApiPublicNourWeeklyRoute: typeof ApiPublicNourWeeklyRoute
   ApiPublicPipedreamWebhookRoute: typeof ApiPublicPipedreamWebhookRoute
@@ -810,6 +824,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UseCasesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/morning-briefing': {
+      id: '/api/public/morning-briefing'
+      path: '/api/public/morning-briefing'
+      fullPath: '/api/public/morning-briefing'
+      preLoaderRoute: typeof ApiPublicMorningBriefingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/nour-automations': {
       id: '/api/public/nour-automations'
       path: '/api/public/nour-automations'
@@ -922,6 +943,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   EmployeesIndexRoute: EmployeesIndexRoute,
   UseCasesIndexRoute: UseCasesIndexRoute,
+  ApiPublicMorningBriefingRoute: ApiPublicMorningBriefingRoute,
   ApiPublicNourAutomationsRoute: ApiPublicNourAutomationsRoute,
   ApiPublicNourWeeklyRoute: ApiPublicNourWeeklyRoute,
   ApiPublicPipedreamWebhookRoute: ApiPublicPipedreamWebhookRoute,
