@@ -31,7 +31,7 @@ export const listTrackedKeywords = createServerFn({ method: "POST" })
         .order("created_at", { ascending: true }),
       context.supabase
         .from("rank_snapshots")
-        .select("keyword_id, position, url, captured_at")
+        .select("keyword_id, position, url, captured_at, source, clicks, impressions, competitors")
         .eq("workspace_id", data.workspaceId)
         .order("captured_at", { ascending: true })
         .limit(1000),
@@ -40,13 +40,36 @@ export const listTrackedKeywords = createServerFn({ method: "POST" })
 
     const history: Record<
       string,
-      { position: number | null; url: string | null; capturedAt: string }[]
+      {
+        position: number | null;
+        url: string | null;
+        capturedAt: string;
+        source: string | null;
+        clicks: number | null;
+        impressions: number | null;
+        competitors: { host: string; url: string; position: number }[];
+      }[]
     > = {};
-    for (const snap of snapshots ?? []) {
+    type Snap = {
+      keyword_id: string;
+      position: number | null;
+      url: string | null;
+      captured_at: string;
+      source?: string | null;
+      clicks?: number | null;
+      impressions?: number | null;
+      competitors?: unknown;
+    };
+    // أعمدة source/clicks/impressions/competitors أضيفت بترحيل لاحق ولم تُحدَّث الأنواع المولّدة بعد.
+    for (const snap of ((snapshots ?? []) as unknown as Snap[])) {
       (history[snap.keyword_id] ??= []).push({
         position: snap.position,
         url: snap.url,
         capturedAt: snap.captured_at,
+        source: snap.source ?? null,
+        clicks: snap.clicks ?? null,
+        impressions: snap.impressions ?? null,
+        competitors: Array.isArray(snap.competitors) ? (snap.competitors as never) : [],
       });
     }
     return { keywords: keywords ?? [], history };
@@ -90,50 +113,69 @@ export const removeTrackedKeyword = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/** يفحص كل الكلمات المفعّلة الآن ويخزّن لقطة ترتيب جديدة لكل واحدة. */
+/**
+ * يفحص كل الكلمات المفعّلة الآن ويخزّن لقطة ترتيب جديدة لكل واحدة.
+ * المصدر بترتيب الموثوقية: Search Console (بيانات جوجل الفعلية) ← صفحة جوجل الحقيقية للسوق ← محركات بديلة.
+ * كل لقطة تحمل مصدرها حتى لا يُعرض تقدير على أنه رقم جوجل.
+ */
 export const refreshRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object(ws).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: keywords, error } = await context.supabase
-      .from("tracked_keywords")
-      .select("id, keyword, domain")
-      .eq("workspace_id", data.workspaceId)
-      .eq("active", true)
-      .limit(50);
+    const [{ data: keywords, error }, { data: gsc }] = await Promise.all([
+      context.supabase
+        .from("tracked_keywords")
+        .select("id, keyword, domain, market")
+        .eq("workspace_id", data.workspaceId)
+        .eq("active", true)
+        .limit(50),
+      context.supabase
+        .from("pipedream_accounts")
+        .select("id")
+        .eq("workspace_id", data.workspaceId)
+        .eq("provider", "search-console")
+        .eq("status", "connected")
+        .maybeSingle(),
+    ]);
     if (error) throw new Error(error.message);
-    if (!keywords?.length) return { checked: 0 };
+    if (!keywords?.length) return { checked: 0, sources: {} as Record<string, number>, gscConnected: Boolean(gsc) };
 
-    const { serpSearch } = await import("./seo-research.server");
+    const { checkRank } = await import("./rank-check.server");
     const now = new Date().toISOString();
     let checked = 0;
+    const sources: Record<string, number> = {};
 
     for (const row of keywords) {
       try {
-        const results = await serpSearch(row.keyword);
-        const hit = results.find((r) => {
-          try {
-            const host = new URL(r.url).hostname.replace(/^www\./, "").toLowerCase();
-            return host === row.domain || host.endsWith(`.${row.domain}`);
-          } catch {
-            return false;
-          }
+        const r = await checkRank({
+          workspaceId: data.workspaceId,
+          keyword: row.keyword,
+          domain: row.domain,
+          market: row.market ?? "EG",
+          gscConnected: Boolean(gsc),
         });
         await context.supabase.from("rank_snapshots").insert({
           workspace_id: data.workspaceId,
           keyword_id: row.id,
-          position: hit?.rank ?? null,
-          url: hit?.url ?? null,
+          position: r.position,
+          url: r.url,
           captured_at: now,
-        });
+          source: r.source,
+          clicks: r.clicks ?? null,
+          impressions: r.impressions ?? null,
+          competitors: r.competitors,
+        } as never);
         await context.supabase
           .from("tracked_keywords")
           .update({ last_checked_at: now })
           .eq("id", row.id);
+        sources[r.source] = (sources[r.source] ?? 0) + 1;
         checked += 1;
+        // تباعد بسيط حتى لا يحجبنا جوجل عند فحص كلمات كثيرة
+        await new Promise((res) => setTimeout(res, 700));
       } catch (e) {
         console.error("[nour] rank check failed:", e);
       }
     }
-    return { checked };
+    return { checked, sources, gscConnected: Boolean(gsc) };
   });

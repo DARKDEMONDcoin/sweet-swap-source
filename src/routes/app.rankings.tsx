@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Fragment, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Plus, RefreshCw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Link2, Loader2, Plus, RefreshCw, ShieldCheck, Swords, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { useWorkspace } from "@/lib/data";
@@ -68,6 +68,41 @@ function Delta({ points }: { points: Point[] }) {
   );
 }
 
+const markets: { code: string; label: string }[] = [
+  { code: "EG", label: "مصر" },
+  { code: "SA", label: "السعودية" },
+  { code: "AE", label: "الإمارات" },
+  { code: "KW", label: "الكويت" },
+  { code: "QA", label: "قطر" },
+  { code: "BH", label: "البحرين" },
+  { code: "OM", label: "عُمان" },
+  { code: "JO", label: "الأردن" },
+  { code: "LB", label: "لبنان" },
+  { code: "IQ", label: "العراق" },
+  { code: "MA", label: "المغرب" },
+  { code: "DZ", label: "الجزائر" },
+  { code: "TN", label: "تونس" },
+  { code: "LY", label: "ليبيا" },
+  { code: "SD", label: "السودان" },
+  { code: "PS", label: "فلسطين" },
+  { code: "SY", label: "سوريا" },
+  { code: "YE", label: "اليمن" },
+];
+
+const sourceMeta: Record<string, { label: string; cls: string; title: string }> = {
+  "search-console": {
+    label: "Search Console",
+    cls: "bg-jade/12 text-jade-deep",
+    title: "متوسط الترتيب الفعلي من بيانات جوجل لموقعك خلال 28 يوماً",
+  },
+  google: { label: "جوجل", cls: "bg-amber/15 text-amber", title: "موقعك في صفحة نتائج جوجل الحقيقية لهذا السوق (أول 100 نتيجة)" },
+  "search-engines": {
+    label: "تقدير",
+    cls: "bg-secondary text-muted-foreground",
+    title: "من محركات بديلة (Bing/Brave) — اربط Search Console لأرقام جوجل الفعلية",
+  },
+};
+
 function RankingsPage() {
   const { data: workspace } = useWorkspace();
   const qc = useQueryClient();
@@ -76,8 +111,15 @@ function RankingsPage() {
   const remove = useServerFn(removeTrackedKeyword);
   const refresh = useServerFn(refreshRankings);
 
+  const wsCountry = (workspace as { country?: string | null } | undefined)?.country ?? "";
+  const wsSite = (workspace as { website?: string | null } | undefined)?.website ?? "";
+
   const [keyword, setKeyword] = useState("");
   const [domain, setDomain] = useState("");
+  const [market, setMarket] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+  const effectiveMarket = market || (markets.some((m) => m.code === wsCountry) ? wsCountry : "EG");
+  const effectiveDomain = domain || wsSite;
 
   const key = ["rankings", workspace?.id];
   const { data, isLoading } = useQuery({
@@ -90,7 +132,7 @@ function RankingsPage() {
 
   const addMutation = useMutation({
     mutationFn: () =>
-      add({ data: { workspaceId: workspace!.id, keyword, domain, market: "SA" } }),
+      add({ data: { workspaceId: workspace!.id, keyword, domain: effectiveDomain, market: effectiveMarket } }),
     onSuccess: () => {
       setKeyword("");
       invalidate();
@@ -108,30 +150,43 @@ function RankingsPage() {
   });
 
   const rows = data?.keywords ?? [];
+  const anyGsc = Object.values(data?.history ?? {}).some((pts) => pts.some((p) => p.source === "search-console"));
 
   return (
     <AppShell
       title="تتبّع الترتيب"
-      lead="ترتيبك الحقيقي في نتائج البحث لكل كلمة — لقطة بتاريخها لترى الاتجاه"
+      lead="ترتيبك الحقيقي في جوجل لكل كلمة وسوق — لقطة بتاريخها ومصدرها، ومن يسبقك"
       actions={
         <button
           onClick={() => refreshMutation.mutate()}
           disabled={!workspace || refreshMutation.isPending || !rows.length}
           className="inline-flex items-center gap-1.5 rounded-xl bg-foreground px-3.5 py-2.5 text-sm font-bold text-background disabled:opacity-50"
         >
-          {refreshMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          حدّث الترتيب الآن
+          {refreshMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+          {refreshMutation.isPending ? "نفحص جوجل…" : "حدّث الترتيب الآن"}
         </button>
       }
     >
+      {!anyGsc ? (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-jade/30 bg-jade/6 p-4 text-sm">
+          <ShieldCheck className="size-5 shrink-0 text-jade-deep" />
+          <p className="min-w-0 flex-1 leading-relaxed">
+            <b>للأرقام الرسمية من جوجل:</b> اربط Google Search Console مرة واحدة — سنعرض متوسط ترتيبك الفعلي والنقرات
+            والظهور لكل كلمة بدل الاعتماد على قراءة صفحة النتائج.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-foreground px-3.5 py-2 text-xs font-bold text-background"
+          >
+            <Link2 className="size-3.5" /> اربط Search Console
+          </Link>
+        </div>
+      ) : null}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (keyword.trim().length > 1 && domain.trim().length > 2) addMutation.mutate();
+          if (keyword.trim().length > 1 && effectiveDomain.trim().length > 2) addMutation.mutate();
         }}
         className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4"
       >
@@ -140,7 +195,7 @@ function RankingsPage() {
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="مثال: أفضل قهوة مختصة بالرياض"
+            placeholder="مثال: أفضل قهوة مختصة في القاهرة"
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
           />
         </label>
@@ -149,10 +204,24 @@ function RankingsPage() {
           <input
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            placeholder="example.com"
+            placeholder={wsSite ? wsSite.replace(/^https?:\/\//, "") : "example.com"}
             dir="ltr"
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
           />
+        </label>
+        <label className="min-w-32">
+          <span className="mb-1 block text-xs font-bold text-muted-foreground">السوق</span>
+          <select
+            value={effectiveMarket}
+            onChange={(e) => setMarket(e.target.value)}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm"
+          >
+            {markets.map((m) => (
+              <option key={m.code} value={m.code}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </label>
         <button
           type="submit"
@@ -169,8 +238,8 @@ function RankingsPage() {
         </p>
       ) : rows.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-          أضف كلماتك المهمة ونطاق موقعك، ثم اضغط «حدّث الترتيب الآن» — نور تلتقط ترتيبك من نتائج بحث
-          حقيقية وتحفظ لك السجل يوماً بيوم.
+          أضف كلماتك المهمة ونطاق موقعك والسوق، ثم اضغط «حدّث الترتيب الآن» — نور تلتقط ترتيبك من جوجل نفسها
+          (أو Search Console إن كان مربوطاً) وتحفظ لك السجل يوماً بيوم مع أسماء المنافسين الذين يسبقونك.
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-2xl border border-border">
@@ -178,8 +247,9 @@ function RankingsPage() {
             <thead className="bg-secondary/60 text-xs">
               <tr>
                 <th className="p-3 text-start font-bold">الكلمة</th>
-                <th className="p-3 text-start font-bold">النطاق</th>
-                <th className="p-3 text-start font-bold">الترتيب الحالي</th>
+                <th className="p-3 text-start font-bold">السوق</th>
+                <th className="p-3 text-start font-bold">الترتيب</th>
+                <th className="p-3 text-start font-bold">المصدر</th>
                 <th className="p-3 text-start font-bold">التغيّر</th>
                 <th className="p-3 text-start font-bold">الاتجاه</th>
                 <th className="p-3 text-start font-bold">آخر فحص</th>
@@ -189,37 +259,100 @@ function RankingsPage() {
             <tbody>
               {rows.map((row) => {
                 const points = data?.history?.[row.id] ?? [];
-                const last = [...points].reverse().find((p) => p.position != null);
+                const latest = points[points.length - 1];
+                const src = latest?.source ? sourceMeta[latest.source] : null;
+                const isOpen = open === row.id;
                 return (
-                  <tr key={row.id} className="border-t border-border/70">
-                    <td className="max-w-[18rem] truncate p-3 font-semibold">{row.keyword}</td>
-                    <td className="p-3 text-muted-foreground" dir="ltr">
-                      {row.domain}
-                    </td>
-                    <td className="p-3 font-black">
-                      {last?.position ? `#${last.position}` : "خارج أول 10"}
-                    </td>
-                    <td className="p-3">
-                      <Delta points={points} />
-                    </td>
-                    <td className="p-3">
-                      <Sparkline points={points} />
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground">
-                      {row.last_checked_at
-                        ? new Date(row.last_checked_at).toLocaleDateString("ar-EG")
-                        : "—"}
-                    </td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => removeMutation.mutate(row.id)}
-                        className="rounded-lg p-2 text-muted-foreground hover:text-coral"
-                        aria-label="حذف الكلمة"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={row.id}>
+                    <tr className="border-t border-border/70">
+                      <td className="max-w-[18rem] p-3">
+                        <p className="truncate font-semibold">{row.keyword}</p>
+                        <p className="truncate text-xs text-muted-foreground" dir="ltr">
+                          {latest?.url ? latest.url.replace(/^https?:\/\/(www\.)?/, "") : row.domain}
+                        </p>
+                      </td>
+                      <td className="p-3 text-xs font-bold">{markets.find((m) => m.code === row.market)?.label ?? row.market}</td>
+                      <td className="p-3">
+                        {!latest ? (
+                          <span className="text-xs text-muted-foreground">لم يُفحص بعد</span>
+                        ) : latest.position ? (
+                          <span className="font-black">#{latest.position}</span>
+                        ) : (
+                          <span className="text-xs font-bold text-coral">خارج أول 100</span>
+                        )}
+                        {latest?.impressions != null && latest.source === "search-console" ? (
+                          <p className="text-[0.68rem] text-muted-foreground">
+                            {latest.clicks ?? 0} نقرة · {latest.impressions} ظهور
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="p-3">
+                        {src ? (
+                          <span title={src.title} className={`rounded-full px-2 py-0.5 text-[0.68rem] font-bold ${src.cls}`}>
+                            {src.label}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <Delta points={points} />
+                      </td>
+                      <td className="p-3">
+                        <Sparkline points={points} />
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground">
+                        {row.last_checked_at ? new Date(row.last_checked_at).toLocaleDateString("ar-EG") : "—"}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          {latest?.competitors?.length ? (
+                            <button
+                              onClick={() => setOpen(isOpen ? null : row.id)}
+                              className="rounded-lg p-2 text-muted-foreground hover:text-foreground"
+                              aria-label="من يسبقك"
+                              title="من يسبقك في النتائج"
+                            >
+                              <Swords className="size-4" />
+                            </button>
+                          ) : null}
+                          <button
+                            onClick={() => removeMutation.mutate(row.id)}
+                            className="rounded-lg p-2 text-muted-foreground hover:text-coral"
+                            aria-label="حذف الكلمة"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isOpen && latest?.competitors?.length ? (
+                      <tr className="border-t border-border/40 bg-secondary/30">
+                        <td colSpan={8} className="p-3">
+                          <p className="mb-2 text-xs font-bold text-muted-foreground">أول 5 نتائج لهذه الكلمة الآن:</p>
+                          <ol className="flex flex-wrap gap-2">
+                            {latest.competitors.map((c) => (
+                              <li key={c.url}>
+                                <a
+                                  href={c.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  dir="ltr"
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${
+                                    c.host === row.domain || c.host.endsWith(`.${row.domain}`)
+                                      ? "border-jade bg-jade/10 text-jade-deep"
+                                      : "border-border bg-card"
+                                  }`}
+                                >
+                                  #{c.position} {c.host}
+                                </a>
+                              </li>
+                            ))}
+                          </ol>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 );
               })}
             </tbody>

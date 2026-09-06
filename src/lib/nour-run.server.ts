@@ -11,6 +11,7 @@ import { freeChat, gatherEvidence, planResearch } from "./nour-research.server";
 import { withBudget } from "./seo-research.server";
 import { memoryBlock } from "./memory.server";
 import { actionTruthRules, sanitizeActionClaims } from "./action-claims";
+import { sharedSystemBlocks } from "./team-knowledge";
 
 export type Client = SupabaseClient<Database>;
 
@@ -47,6 +48,52 @@ export const evidenceRules = [
   "اذكر مصدر كل رقم مهم (Search Console، اقتراحات البحث، نتائج البحث، تحليل الصفحة).",
   "إن كانت الأدلة ناقصة، قل ذلك صراحة واقترح ما يلزم لجمعها.",
 ].join("\n");
+
+/**
+ * معايير الحِرفة لكل موظف — الجزء «الذكي» من تعليمات النظام: كيف يفكّر قبل أن يكتب،
+ * وما الذي يجعل مخرجه من مستوى وكالة لا من مستوى قالب.
+ */
+export const craft: Record<string, string> = {
+  sonny: [
+    "قبل الكتابة: حدّد الهدف (وصول/تفاعل/رسائل/مبيعات)، والجمهور، والمنصة، واللهجة المناسبة له.",
+    "كل منشور: هوك في أول 6 كلمات يوقف التمرير، فكرة واحدة، دعوة واحدة، هاشتاقات بطبقات (واسع/متوسط/متخصص/محلي) بلا حشو.",
+    "الريلز: سيناريو بالثواني (0-3 هوك، 3-20 قيمة، آخر 5 دعوة) مع نص على الشاشة وصوت مقترح.",
+    "اقترح توقيت النشر بالتوقيت المحلي للجمهور، واذكر ما ستقيسه بعد 48 ساعة.",
+    "الصور: اكتب وصفاً بصرياً إنجليزياً دقيقاً (المشهد، الإضاءة، الزاوية، المساحة الفارغة للنص) داخل حقل image_prompt أو تحت عنوان «وصف الصورة».",
+  ].join("\n"),
+  eva: [
+    "قبل أي رد بريد: صنّف (عاجل/مهم/انتظار/أرشفة)، وحدّد القرار المطلوب من المالك في سطر.",
+    "الردود: قصيرة، بصوت المالك، بلا التزامات جديدة بمواعيد أو أموال لم يوافق عليها.",
+    "المواعيد: لا اجتماع بلا هدف ومدة وأجندة؛ اقترح 3 بدائل زمنية بالتوقيت المحلي.",
+    "المحاضر: قرارات → مهام (مسؤول + تاريخ) → نقاط مفتوحة.",
+  ].join("\n"),
+  sam: [
+    "قبل أي رسالة: حدّد الشخصية المشترية، الألم الواحد الذي تعالجه، والزاوية الواحدة للرسالة.",
+    "رسالة التواصل: أقل من 90 كلمة، سطر أول شخصي حقيقي، قيمة قبل الطلب، طلب واحد سهل.",
+    "التسلسل: 4-5 لمسات على 14 يوماً بزوايا مختلفة، وانسحاب مهذب في الأخيرة.",
+    "الاعتراضات: اعترف → أعد الصياغة → دليل → سؤال يعيد الحوار.",
+    "رتّب الصفقات باحتمال الإغلاق × القيمة، واذكر الخطوة التالية لكل صفقة بتاريخ.",
+  ].join("\n"),
+  nour: [
+    "قبل الكتابة: حدّد نية البحث (معلوماتية/تجارية/شرائية/محلية) والكلمة الرئيسية وعنقودها الدلالي والمنافسين في الصفحة الأولى.",
+    "المقال: عنوان يعد بنتيجة ويحوي الكلمة، مقدمة تجيب في 3 أسطر، عناوين H2/H3 تطابق أسئلة الباحثين، جداول/قوائم حيث تفيد، أسئلة شائعة، ودعوة واحدة.",
+    "كل مقال يخرج مع: عنوان ميتا (≤60 حرفاً)، وصف ميتا (≤155)، رابط مقترح، روابط داخلية مقترحة، وبيانات منظمة مناسبة.",
+    "اكتب عربية أصلية: تطبيع الرسم (أ/إ/ا، ة/ه، ي/ى) في البحث، وفصحى مقروءة في المتن، وأمثلة من السوق المحلي.",
+    "الأرقام (أحجام بحث، ترتيب) من الأدلة الميدانية أو Search Console فقط؛ وإلا صرّح أنها تقدير.",
+  ].join("\n"),
+  dana: [
+    "قبل التصميم: الرسالة الواحدة التي يجب أن تُفهم في ثانيتين، ثم الهرمية البصرية، ثم الهوية.",
+    "كل تصميم يخرج بصورة فعلية مولّدة، مع وصف بصري إنجليزي دقيق في image_prompt: المشهد، الخامة، الإضاءة، الألوان (بأكواد hex إن عُرفت)، النسبة، ومساحة فارغة للنص العربي.",
+    "لا نص عربي داخل الصورة المولّدة؛ اقترح النص ومكانه وخطه العربي (مثل: IBM Plex Arabic، Cairo، Tajawal) ليُضاف لاحقاً.",
+    "اذكر التباين (WCAG AA) والمقاسات لكل منصة (1080×1350 إنستغرام، 1080×1920 قصص، 1200×628 إعلانات).",
+  ].join("\n"),
+  adam: [
+    "قبل التحليل: حدّد السؤال التجاري، المؤشر الحاكم، والفترة والمقارنة (أسبوع بأسبوع/شهر بشهر).",
+    "كل ملاحظة = رقم + مصدر + تفسير + قرار + مؤشر يقيسه.",
+    "إن كانت البيانات غير مربوطة، لا تخترع؛ قدّم إطار التحليل والأسئلة، واطلب ربط المصدر المحدد بسطر واحد يشرح ما سيتغير بعد ربطه.",
+    "صرّح بدرجة الثقة (عالية/متوسطة/منخفضة) في كل استنتاج، وميّز الارتباط عن السببية.",
+  ].join("\n"),
+};
 
 export const personas: Record<
   string,
@@ -308,11 +355,25 @@ export async function executeSkill(
   if (!persona || !skill || skill.employeeId !== params.employeeId)
     throw new Error("قدرة غير معروفة لهذا الموظف.");
 
-  const [{ data: workspace }, { data: brain }] = await Promise.all([
+  const [{ data: workspace }, { data: brain }, { data: linked }] = await Promise.all([
     client.from("workspaces").select("*").eq("id", params.workspaceId).maybeSingle(),
     client.from("brain_items").select("title, body, kind").eq("workspace_id", params.workspaceId),
+    client
+      .from("pipedream_accounts")
+      .select("provider")
+      .eq("workspace_id", params.workspaceId)
+      .eq("status", "connected"),
   ]);
   if (!workspace) throw new Error("مساحة العمل غير موجودة.");
+  // الحسابات المربوطة فعلاً (Pipedream + الربط المباشر) — تُحقن في سياسة التكاملات.
+  const { data: direct } = await client
+    .from("integrations")
+    .select("provider")
+    .eq("workspace_id", params.workspaceId)
+    .eq("status", "connected");
+  const connected = [
+    ...new Set([...(linked ?? []).map((a) => a.provider), ...(direct ?? []).map((i) => i.provider)]),
+  ];
 
   // نكمل القيم الناقصة من تعريف الحقول (defaultValue أو أول خيار) حتى لا يظهر "undefined"
   // في أي مخرج عند التشغيل التلقائي أو الاستدعاء من المحادثة.
@@ -403,6 +464,11 @@ export async function executeSkill(
     day: "numeric",
   });
 
+  const ws = workspace as typeof workspace & {
+    profile?: unknown;
+    website?: string | null;
+    country?: string | null;
+  };
   const system = [
     `أنت ${persona.name}، ${persona.role}`,
     `تعمل داخل منصة «سهل» لصالح العلامة: ${workspace.name} (${workspace.industry}).`,
@@ -411,7 +477,15 @@ export async function executeSkill(
     workspace.banned_words?.length
       ? `كلمات ممنوعة تماماً: ${workspace.banned_words.join("، ")}.`
       : "",
-    brainText ? `معرفة العلامة:\n${brainText}` : "",
+    craft[params.employeeId] ? `## معايير حِرفتك\n${craft[params.employeeId]}` : "",
+    ...sharedSystemBlocks({
+      employeeId: params.employeeId,
+      connected,
+      profile: ws.profile,
+      website: ws.website,
+      country: ws.country,
+    }),
+    brainText ? `## عقل العلامة (ذاكرة مشتركة بين الفريق)\n${brainText}` : "",
     research.block ? `${evidenceRules}\n\n## أدلة ميدانية (لحظية)\n${research.block}` : "",
     live.block
       ? `## بيانات حسابات العلامة (حيّة الآن)\n${live.block}\n\nاعتمد على هذه البيانات الحقيقية في القرارات والأولويات والأسماء والمواعيد، ولا تخترع غيرها.`
@@ -422,7 +496,7 @@ export async function executeSkill(
     // نمنعه: افترض افتراضات مهنية معقولة، واذكرها في سطر واحد في نهاية المخرج.
     "ممنوع أن تبدأ بقسم «معلومات ناقصة» أو أن تطلب بيانات إضافية أو تعتذر عن نقصها. افترض افتراضات مهنية معقولة ونفّذ، ثم اذكرها في سطر واحد فقط تحت عنوان «افتراضات» في نهاية المخرج.",
     "إن طُلب جدول، أكمله حتى آخر صف مطلوب ولا تتوقف في منتصفه، ولا تكتب «وهكذا» أو «باقي الأيام مشابهة».",
-    "أي وصف صورة تكتبه للمولّد: بلا أي نص أو شعار أو حروف داخل الصورة إطلاقاً.",
+    "أي وصف صورة تكتبه للمولّد: بلا أي نص أو شعار أو حروف داخل الصورة إطلاقاً. اكتبه بالإنجليزية تحت عنوان «وصف الصورة» أو داخل كتلة كود.",
     actionTruthRules,
     "اكتب بالعربية الفصحى الواضحة، بصيغة Markdown منسّقة، والتزم حرفياً بالهيكل المطلوب.",
   ]
@@ -483,7 +557,7 @@ export async function executeSkill(
   // نستخدم مزوّداً بلا مفتاح وبلا حد يومي، والرابط دائم صالح للنشر مباشرة.
   if (ARTICLE_SKILLS.has(skill.id)) {
     try {
-      const { ownedHeroImage, heroPrompt } = await import("./image-gen.server");
+      const { ownedHeroImage, heroPrompt, extractImagePrompt } = await import("./image-gen.server");
       const subjectForImage =
         values["topic"] ||
         values["keyword"] ||
@@ -495,10 +569,13 @@ export async function executeSkill(
         skill.title;
 
       const alt = `${subjectForImage}`.slice(0, 120);
+      // إن كتب الموظف وصفاً بصرياً دقيقاً داخل المخرج (دانة/سِراج) نولّد الصورة منه
+      // حرفياً بدل وصف عام — فتطابق الصورة ما وعد به النص.
+      const authored = extractImagePrompt(output);
       const hero = await ownedHeroImage(
         client as unknown as Parameters<typeof ownedHeroImage>[0],
         params.workspaceId,
-        heroPrompt(subjectForImage, workspace.industry),
+        authored ?? heroPrompt(subjectForImage, workspace.industry),
       );
       const lines = output.split("\n");
       const at = lines[0]?.startsWith("#") ? 1 : 0;

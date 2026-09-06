@@ -119,6 +119,37 @@ export function heroPrompt(topic: string, industry?: string): string {
     .join(" ");
 }
 
+const NO_TEXT = " No text, no letters, no typography, no watermark, no logo.";
+
+/**
+ * يستخرج الوصف البصري الذي كتبه الموظف داخل مخرجه (كتلة كود إنجليزية، أو سطر
+ * بعد «وصف الصورة»/«Image prompt»/«برومبت») ليُولَّد منه فعلياً بدل وصف عام.
+ */
+export function extractImagePrompt(markdown: string): string | null {
+  const candidates: string[] = [];
+  // 1) كتل كود تحتوي نصاً إنجليزياً طويلاً
+  for (const m of markdown.matchAll(/```[a-z]*\n([\s\S]*?)```/gi)) {
+    const body = (m[1] ?? "").trim();
+    if (body.length > 40 && /[a-z]{4,}/i.test(body) && !/[\u0600-\u06FF]{3,}/.test(body.slice(0, 80))) candidates.push(body);
+  }
+  // 2) سطر بعد عنوان/تسمية الوصف
+  const label = /(?:image\s*prompt|prompt|وصف الصورة|برومبت الصورة|برومبت|الوصف البصري)\s*[:：\-–]?\s*\**\s*\n?\s*([^\n]{40,900})/gi;
+  for (const m of markdown.matchAll(label)) {
+    const line = (m[1] ?? "").replace(/^[*_`"“]+|[*_`"”]+$/g, "").trim();
+    if (/[a-z]{4,}/i.test(line)) candidates.push(line);
+  }
+  // 3) اقتباس إنجليزي طويل بين علامتي تنصيص
+  for (const m of markdown.matchAll(/["“]([A-Za-z][^"”\n]{60,700})["”]/g)) candidates.push((m[1] ?? "").trim());
+
+  const best = candidates
+    .map((c) => c.replace(/\s+/g, " ").trim())
+    .filter((c) => c.length >= 40)
+    .sort((a, b) => b.length - a.length)[0];
+  if (!best) return null;
+  const clean = best.replace(/[\u0600-\u06FF]+/g, "").replace(/\s+/g, " ").trim().slice(0, 900);
+  return clean.length >= 30 ? clean + NO_TEXT : null;
+}
+
 /**
  * صورة رئيسية «مملوكة»: نولّدها ثم نرفعها إلى مخزن Supabase (nour-media) باسم مساحة العمل،
  * فتصبح أصلاً دائماً يخصّ العميل لا رابطاً خارجياً. عند أي فشل نرجع لرابط المزوّد المجاني.
