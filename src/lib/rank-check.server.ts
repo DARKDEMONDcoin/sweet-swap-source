@@ -19,7 +19,7 @@ export type RankResult = {
   impressions?: number;
   /** أول 5 نتائج منافسة (نطاق + رابط) لنعرف من يسبقك. */
   competitors: { host: string; url: string; position: number }[];
-  note?: string;
+  note?: string | undefined;
 };
 
 const marketToGoogle: Record<string, { gl: string; hl: string; domain: string }> = {

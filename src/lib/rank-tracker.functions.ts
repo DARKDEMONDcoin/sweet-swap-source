@@ -50,7 +50,18 @@ export const listTrackedKeywords = createServerFn({ method: "POST" })
         competitors: { host: string; url: string; position: number }[];
       }[]
     > = {};
-    for (const snap of snapshots ?? []) {
+    type Snap = {
+      keyword_id: string;
+      position: number | null;
+      url: string | null;
+      captured_at: string;
+      source?: string | null;
+      clicks?: number | null;
+      impressions?: number | null;
+      competitors?: unknown;
+    };
+    // أعمدة source/clicks/impressions/competitors أضيفت بترحيل لاحق ولم تُحدَّث الأنواع المولّدة بعد.
+    for (const snap of ((snapshots ?? []) as unknown as Snap[])) {
       (history[snap.keyword_id] ??= []).push({
         position: snap.position,
         url: snap.url,
