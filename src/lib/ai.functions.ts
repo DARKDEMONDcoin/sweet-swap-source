@@ -125,6 +125,27 @@ export const askEmployee = createServerFn({ method: "POST" })
           : `هذه المنصة مربوطة — أنجز المخرج جاهزاً للنشر عليها مباشرة.`)
       : "";
 
+    // تنفيذ فعلي لقدرات الأقسام من داخل الشات (فحص سيو، ترتيب، تقويم، أفكار، أداء).
+    let toolBlocks: { block: string; footer: string; tool: string }[] = [];
+    try {
+      const { runChatTools } = await import("./chat-tools.server");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      toolBlocks = await runChatTools(supabaseAdmin, {
+        workspaceId: data.workspaceId,
+        employeeId: data.employeeId,
+        message: data.message,
+        website: ws.website,
+        country: ws.country,
+        connected,
+        targets: askedTargets,
+      });
+    } catch (e) {
+      console.warn("[chat-tools] skipped:", e instanceof Error ? e.message : e);
+    }
+    const toolsBlock = toolBlocks.length
+      ? `## نتائج نفّذتها فعلاً الآن من أقسام المنصة (حقيقية — استخدمها حرفياً)\n${toolBlocks.map((t) => t.block).join("\n\n")}`
+      : "";
+
     const teamActivity = (recentTasks ?? [])
       .map((t) => {
         const who = employeeDirectory[t.employee_id as EmployeeId]?.name ?? t.employee_id;
@@ -162,6 +183,7 @@ export const askEmployee = createServerFn({ method: "POST" })
       research.block ? `${evidenceRules}\n\n## أدلة ميدانية (لحظية)\n${research.block}` : "",
       actionTruthRules,
       askedBlock,
+      toolsBlock,
       "## أسلوب المحادثة",
       "أجب دائماً بالعربية. التحية والأسئلة القصيرة: رد قصير ودافئ بجملة أو اثنتين ثم اقتراح عملي واحد. طلبات العمل: مخرج كامل جاهز مباشرة.",
       "إن كان طلب المستخدم يحتاج صورة (تصميم، منشور بصري، صورة مقال، كرييتف) فاكتب وصفاً بصرياً إنجليزياً دقيقاً في الحقل image_prompt — وستُولَّد الصورة فعلياً وتُعرض للمستخدم؛ لا تكتفِ بوصفها في النص.",
@@ -270,6 +292,8 @@ export const askEmployee = createServerFn({ method: "POST" })
 
 
     reply = sanitizeActionClaims(reply, connected);
+    const footers = toolBlocks.map((t) => t.footer).filter(Boolean);
+    if (footers.length) reply = `${reply.trim()}\n\n> ${footers.join(" · ")}`;
 
     if (imageUrl) {
       const alt = (deliverables[0]?.title ?? "الصورة المولّدة").slice(0, 120);
