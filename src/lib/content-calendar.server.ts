@@ -63,6 +63,36 @@ export function extractJson<T>(raw: string): T | null {
   }
 }
 
+/**
+ * وضع JSON في بعض المزوّدين يفرض كائناً جذرياً، فيعيد النموذج
+ * {"items":[...]} أو عنصراً واحداً بدل المصفوفة. نطبّع كل الأشكال إلى مصفوفة.
+ */
+export function extractJsonList<T extends object>(raw: string, requiredKey: keyof T): T[] {
+  const parsed = extractJson<unknown>(raw);
+  const isItem = (x: unknown): x is T => Boolean(x) && typeof x === "object" && requiredKey in (x as object);
+  if (Array.isArray(parsed)) return parsed.filter(isItem);
+  if (parsed && typeof parsed === "object") {
+    if (isItem(parsed)) return [parsed];
+    for (const v of Object.values(parsed as Record<string, unknown>)) {
+      if (Array.isArray(v)) {
+        const items = v.filter(isItem);
+        if (items.length) return items;
+      }
+    }
+  }
+  // احتياط أخير: عدة كائنات JSON متتالية بلا مصفوفة (NDJSON).
+  const out: T[] = [];
+  for (const m of raw.matchAll(/\{[^{}]*\}/g)) {
+    try {
+      const o = JSON.parse(m[0]) as unknown;
+      if (isItem(o)) out.push(o);
+    } catch {
+      /* تجاهل */
+    }
+  }
+  return out;
+}
+
 async function workspaceContext(admin: Admin, workspaceId: string) {
   const [{ data: ws }, { data: brain }, { data: linked }, { data: recent }] = await Promise.all([
     admin.from("workspaces").select("*").eq("id", workspaceId).maybeSingle(),
