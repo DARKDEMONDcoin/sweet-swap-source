@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCheck, ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
+import { BusinessProfileCard } from "@/components/app/BusinessProfileCard";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
 import { getMember } from "@/data/team";
 import { taskStatusLabel } from "@/data/app";
@@ -79,6 +80,15 @@ function AppHome() {
           </div>
         ))}
       </div>
+
+      {workspace ? (
+        <BusinessProfileCard
+          className="mt-6"
+          workspaceId={workspace.id}
+          website={(workspace as { website?: string | null }).website}
+          profile={(workspace as { profile?: Record<string, unknown> }).profile as never}
+        />
+      ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <section className="rounded-3xl border border-border bg-card p-6">
