@@ -73,14 +73,14 @@ function SourceCard({
   const ok = status.state === "ok";
   const tone =
     status.state === "ok"
-      ? "border-mint/40 bg-mint/10"
+      ? "border-jade/40 bg-jade/10"
       : status.state === "error"
         ? "border-coral/40 bg-coral/10"
         : "border-border bg-secondary/50";
   const Icon = ok ? CheckCircle2 : status.state === "error" ? AlertTriangle : PlugZap;
   return (
     <div className={`flex items-start gap-3 rounded-2xl border p-4 ${tone}`}>
-      <Icon className={`mt-0.5 size-5 shrink-0 ${ok ? "text-mint" : status.state === "error" ? "text-coral" : "text-muted-foreground"}`} />
+      <Icon className={`mt-0.5 size-5 shrink-0 ${ok ? "text-jade" : status.state === "error" ? "text-coral" : "text-muted-foreground"}`} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-black">{label}</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{status.message}</p>
