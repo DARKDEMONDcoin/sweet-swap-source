@@ -163,7 +163,7 @@ export async function ensureTodayBriefing(admin: Admin, workspaceId: string, for
     .from("briefings")
     .upsert(
       { workspace_id: workspaceId, employee_id: "eva", day, content: briefing as never },
-      { onConflict: "workspace_id,employee_id,day" },
+      { onConflict: "workspace_id,day" },
     );
   return briefing;
 }
