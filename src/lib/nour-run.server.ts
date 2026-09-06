@@ -11,6 +11,7 @@ import { freeChat, gatherEvidence, planResearch } from "./nour-research.server";
 import { withBudget } from "./seo-research.server";
 import { memoryBlock } from "./memory.server";
 import { actionTruthRules, sanitizeActionClaims } from "./action-claims";
+import { sharedSystemBlocks } from "./team-knowledge";
 
 export type Client = SupabaseClient<Database>;
 
@@ -354,11 +355,25 @@ export async function executeSkill(
   if (!persona || !skill || skill.employeeId !== params.employeeId)
     throw new Error("قدرة غير معروفة لهذا الموظف.");
 
-  const [{ data: workspace }, { data: brain }] = await Promise.all([
+  const [{ data: workspace }, { data: brain }, { data: linked }] = await Promise.all([
     client.from("workspaces").select("*").eq("id", params.workspaceId).maybeSingle(),
     client.from("brain_items").select("title, body, kind").eq("workspace_id", params.workspaceId),
+    client
+      .from("pipedream_accounts")
+      .select("provider")
+      .eq("workspace_id", params.workspaceId)
+      .eq("status", "connected"),
   ]);
   if (!workspace) throw new Error("مساحة العمل غير موجودة.");
+  // الحسابات المربوطة فعلاً (Pipedream + الربط المباشر) — تُحقن في سياسة التكاملات.
+  const { data: direct } = await client
+    .from("integrations")
+    .select("provider")
+    .eq("workspace_id", params.workspaceId)
+    .eq("status", "connected");
+  const connected = [
+    ...new Set([...(linked ?? []).map((a) => a.provider), ...(direct ?? []).map((i) => i.provider)]),
+  ];
 
   // نكمل القيم الناقصة من تعريف الحقول (defaultValue أو أول خيار) حتى لا يظهر "undefined"
   // في أي مخرج عند التشغيل التلقائي أو الاستدعاء من المحادثة.
@@ -449,6 +464,11 @@ export async function executeSkill(
     day: "numeric",
   });
 
+  const ws = workspace as typeof workspace & {
+    profile?: unknown;
+    website?: string | null;
+    country?: string | null;
+  };
   const system = [
     `أنت ${persona.name}، ${persona.role}`,
     `تعمل داخل منصة «سهل» لصالح العلامة: ${workspace.name} (${workspace.industry}).`,
@@ -457,7 +477,15 @@ export async function executeSkill(
     workspace.banned_words?.length
       ? `كلمات ممنوعة تماماً: ${workspace.banned_words.join("، ")}.`
       : "",
-    brainText ? `معرفة العلامة:\n${brainText}` : "",
+    craft[params.employeeId] ? `## معايير حِرفتك\n${craft[params.employeeId]}` : "",
+    ...sharedSystemBlocks({
+      employeeId: params.employeeId,
+      connected,
+      profile: ws.profile,
+      website: ws.website,
+      country: ws.country,
+    }),
+    brainText ? `## عقل العلامة (ذاكرة مشتركة بين الفريق)\n${brainText}` : "",
     research.block ? `${evidenceRules}\n\n## أدلة ميدانية (لحظية)\n${research.block}` : "",
     live.block
       ? `## بيانات حسابات العلامة (حيّة الآن)\n${live.block}\n\nاعتمد على هذه البيانات الحقيقية في القرارات والأولويات والأسماء والمواعيد، ولا تخترع غيرها.`
@@ -468,7 +496,7 @@ export async function executeSkill(
     // نمنعه: افترض افتراضات مهنية معقولة، واذكرها في سطر واحد في نهاية المخرج.
     "ممنوع أن تبدأ بقسم «معلومات ناقصة» أو أن تطلب بيانات إضافية أو تعتذر عن نقصها. افترض افتراضات مهنية معقولة ونفّذ، ثم اذكرها في سطر واحد فقط تحت عنوان «افتراضات» في نهاية المخرج.",
     "إن طُلب جدول، أكمله حتى آخر صف مطلوب ولا تتوقف في منتصفه، ولا تكتب «وهكذا» أو «باقي الأيام مشابهة».",
-    "أي وصف صورة تكتبه للمولّد: بلا أي نص أو شعار أو حروف داخل الصورة إطلاقاً.",
+    "أي وصف صورة تكتبه للمولّد: بلا أي نص أو شعار أو حروف داخل الصورة إطلاقاً. اكتبه بالإنجليزية تحت عنوان «وصف الصورة» أو داخل كتلة كود.",
     actionTruthRules,
     "اكتب بالعربية الفصحى الواضحة، بصيغة Markdown منسّقة، والتزم حرفياً بالهيكل المطلوب.",
   ]
@@ -529,7 +557,7 @@ export async function executeSkill(
   // نستخدم مزوّداً بلا مفتاح وبلا حد يومي، والرابط دائم صالح للنشر مباشرة.
   if (ARTICLE_SKILLS.has(skill.id)) {
     try {
-      const { ownedHeroImage, heroPrompt } = await import("./image-gen.server");
+      const { ownedHeroImage, heroPrompt, extractImagePrompt } = await import("./image-gen.server");
       const subjectForImage =
         values["topic"] ||
         values["keyword"] ||
@@ -541,10 +569,13 @@ export async function executeSkill(
         skill.title;
 
       const alt = `${subjectForImage}`.slice(0, 120);
+      // إن كتب الموظف وصفاً بصرياً دقيقاً داخل المخرج (دانة/سِراج) نولّد الصورة منه
+      // حرفياً بدل وصف عام — فتطابق الصورة ما وعد به النص.
+      const authored = extractImagePrompt(output);
       const hero = await ownedHeroImage(
         client as unknown as Parameters<typeof ownedHeroImage>[0],
         params.workspaceId,
-        heroPrompt(subjectForImage, workspace.industry),
+        authored ?? heroPrompt(subjectForImage, workspace.industry),
       );
       const lines = output.split("\n");
       const at = lines[0]?.startsWith("#") ? 1 : 0;
