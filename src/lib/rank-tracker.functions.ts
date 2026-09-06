@@ -31,7 +31,7 @@ export const listTrackedKeywords = createServerFn({ method: "POST" })
         .order("created_at", { ascending: true }),
       context.supabase
         .from("rank_snapshots")
-        .select("keyword_id, position, url, captured_at")
+        .select("keyword_id, position, url, captured_at, source, clicks, impressions, competitors")
         .eq("workspace_id", data.workspaceId)
         .order("captured_at", { ascending: true })
         .limit(1000),
@@ -40,13 +40,25 @@ export const listTrackedKeywords = createServerFn({ method: "POST" })
 
     const history: Record<
       string,
-      { position: number | null; url: string | null; capturedAt: string }[]
+      {
+        position: number | null;
+        url: string | null;
+        capturedAt: string;
+        source: string | null;
+        clicks: number | null;
+        impressions: number | null;
+        competitors: { host: string; url: string; position: number }[];
+      }[]
     > = {};
     for (const snap of snapshots ?? []) {
       (history[snap.keyword_id] ??= []).push({
         position: snap.position,
         url: snap.url,
         capturedAt: snap.captured_at,
+        source: snap.source ?? null,
+        clicks: snap.clicks ?? null,
+        impressions: snap.impressions ?? null,
+        competitors: Array.isArray(snap.competitors) ? (snap.competitors as never) : [],
       });
     }
     return { keywords: keywords ?? [], history };
