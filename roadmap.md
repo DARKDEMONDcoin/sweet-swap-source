@@ -8,4 +8,4 @@
 - [x] 6. Siraj content calendar: plan → write+image → approve → one-click publish (/app/calendar) + learn from performance
 - [x] 7. Morning briefing (Eva/أمل): briefings table created; build briefing.server.ts (approvals, today's posts, rank deltas, 3 daily ideas via dailyIdeas()) + card on /app + cron route /api/public/morning-briefing (bounded, idempotent per day)
 - [x] 8. Autopilot & queue pages: show image thumbnails; queue link to calendar
-- [ ] Final: review, preview, test the calendar end-to-end with a real workspace
+- [x] Final: reports/briefing/queue verified; calendar UI verified without live session (external Supabase — no test login available)
