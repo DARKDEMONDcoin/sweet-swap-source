@@ -6,7 +6,7 @@ import { CalendarDays, ListChecks, Loader2, Plane, Play, Save, TriangleAlert } f
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
-import { useConnectedAccounts, useWorkspace } from "@/lib/data";
+import { useConnectedAccounts, useProfile, useWorkspace } from "@/lib/data";
 import { getAutopilot, runAutopilotNow, saveAutopilot } from "@/lib/autopilot.functions";
 
 export const Route = createFileRoute("/app/autopilot")({
