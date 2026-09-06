@@ -159,6 +159,10 @@ export const askEmployee = createServerFn({ method: "POST" })
       .reverse()
       .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.body }));
 
+    const longForm =
+      /مقال|خطة\s*(سيو|محتوى|تسويق)|\d{3,4}\s*كلمة|صفحة هبوط|دليل شامل|حملة كاملة/.test(data.message) ||
+      data.message.length > 220;
+
     const raw = await freeChat(
       apiKey,
       [
@@ -166,7 +170,10 @@ export const askEmployee = createServerFn({ method: "POST" })
         ...priorMessages,
         { role: "user", content: data.message },
       ],
-      { json: true, timeoutMs: 40_000, maxTokens: 1800 },
+      // طلبات المقالات/الخطط الكاملة تحتاج مخرجاً طويلاً ومهلة أطول — مع سقف زمني إجمالي حتى لا يعلّق الشات.
+      longForm
+        ? { json: true, timeoutMs: 75_000, maxTokens: 6000, budgetMs: 130_000 }
+        : { json: true, timeoutMs: 40_000, maxTokens: 1800, budgetMs: 100_000 },
     );
 
     let reply = raw;
@@ -200,6 +207,15 @@ export const askEmployee = createServerFn({ method: "POST" })
       }
     } catch {
       deliverables = [];
+      // JSON مقطوع (ردّ طويل): ننقذ نص reply بدل عرض JSON خام للمستخدم.
+      const m = raw.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
+      if (m?.[1]) {
+        try {
+          reply = JSON.parse(`"${m[1]}"`);
+        } catch {
+          reply = m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        }
+      }
     }
 
     // الصور تُولَّد فعلياً — لا يبقى المستخدم مع «برومبت» مكتوب فقط.

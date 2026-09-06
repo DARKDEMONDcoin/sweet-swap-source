@@ -54,6 +54,8 @@ export type ChatOptions = {
   attempts?: number;
   /** نجرّب أول نموذجين بالتوازي: أول رد يفوز — أسرع زمن وصول ممكن. */
   race?: boolean;
+  /** الميزانية الزمنية الإجمالية لكل المزوّدات (افتراضياً 120 ثانية أو ضعف مهلة النموذج). */
+  budgetMs?: number;
 };
 
 /** خطأ حد الاستخدام اليومي المجاني على مستوى الحساب — لا فائدة من تجربة نماذج أخرى. */
@@ -256,7 +258,7 @@ async function freeChatInner(
     // أول نموذجين بالتوازي: يقلّل زمن الانتظار إلى أسرع نموذج متاح لحظياً.
     try {
       return await Promise.any(
-        pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, options)),
+        pool.slice(0, 2).map((m) => callModel(apiKey, m, messages, scoped())),
       );
     } catch (error) {
       const errors = ((error as AggregateError).errors ?? []) as Error[];
@@ -269,8 +271,9 @@ async function freeChatInner(
   }
 
   for (const model of pool.slice(options.race === false ? 0 : 2)) {
+    if (outOfBudget()) break;
     try {
-      return await withRetry(() => callModel(apiKey, model, messages, options), 3);
+      return await withRetry(() => callModel(apiKey, model, messages, scoped()), 3);
     } catch (error) {
       // حد يومي أو مفتاح خاطئ: التوقف فوراً بدل استنزاف الوقت في نماذج ستفشل بنفس السبب.
       if (error instanceof DailyFreeLimitError) throw error;
