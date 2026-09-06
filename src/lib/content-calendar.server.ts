@@ -352,7 +352,7 @@ export async function learnFromPerformance(admin: Admin, workspaceId: string): P
       .eq("status", "published")
       .not("metrics", "is", null)
       .limit(40);
-    sample = (internal ?? []).map((p) => {
+    sample = ((internal ?? []) as unknown as { body: string; provider: string; published_at: string | null; metrics?: PostMetrics }[]).map((p) => {
       const m = (p as { metrics?: PostMetrics }).metrics ?? {};
       return { text: p.body.slice(0, 400), likes: m.likes ?? 0, comments: m.comments ?? 0, provider: p.provider, at: p.published_at ?? "" };
     });
