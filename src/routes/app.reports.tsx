@@ -63,6 +63,40 @@ function Table({
   );
 }
 
+function SourceCard({
+  label,
+  status,
+}: {
+  label: string;
+  status: { state: "ok" | "not_connected" | "not_selected" | "error"; message: string };
+}) {
+  const ok = status.state === "ok";
+  const tone =
+    status.state === "ok"
+      ? "border-mint/40 bg-mint/10"
+      : status.state === "error"
+        ? "border-coral/40 bg-coral/10"
+        : "border-border bg-secondary/50";
+  const Icon = ok ? CheckCircle2 : status.state === "error" ? AlertTriangle : PlugZap;
+  return (
+    <div className={`flex items-start gap-3 rounded-2xl border p-4 ${tone}`}>
+      <Icon className={`mt-0.5 size-5 shrink-0 ${ok ? "text-mint" : status.state === "error" ? "text-coral" : "text-muted-foreground"}`} />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black">{label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{status.message}</p>
+        {!ok ? (
+          <Link
+            to="/app/integrations"
+            className="mt-2 inline-flex items-center gap-1 rounded-lg bg-foreground px-3 py-1.5 text-xs font-bold text-background"
+          >
+            {status.state === "error" ? "أعد الربط" : status.state === "not_selected" ? "اختر الموقع/الخاصية" : "اربط الآن"}
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function ReportsPage() {
   const { data: workspace } = useWorkspace();
   const build = useServerFn(buildReport);
