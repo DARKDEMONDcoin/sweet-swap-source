@@ -5,15 +5,10 @@ import { ArrowLeft, ArrowRight, Check, Sparkles, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
+import { BusinessProfileCard } from "@/components/app/BusinessProfileCard";
 import { team } from "@/data/team";
 import { saveAutomation } from "@/lib/automations.functions";
-import {
-  useAddBrainItem,
-  useIntegrations,
-  useSetIntegrationStatus,
-  useUpdateWorkspace,
-  useWorkspace,
-} from "@/lib/data";
+import { useAddBrainItem, useUpdateWorkspace, useWorkspace } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/onboarding")({
@@ -52,9 +47,7 @@ const field = "w-full rounded-2xl border border-border px-4 py-3 outline-none fo
 function Onboarding() {
   const navigate = useNavigate();
   const { data: workspace } = useWorkspace();
-  const { data: integrations } = useIntegrations(workspace?.id);
   const updateWorkspace = useUpdateWorkspace();
-  const setIntegration = useSetIntegrationStatus(workspace?.id);
   const addBrain = useAddBrainItem(workspace?.id);
   const createAutomation = useServerFn(saveAutomation);
 
@@ -66,15 +59,14 @@ function Onboarding() {
   const [tone, setTone] = useState(tones[0]!.id);
   const [banned, setBanned] = useState("الأفضل في العالم، مجاناً ١٠٠٪");
   const [hired, setHired] = useState<string[]>(team.map((t) => t.id));
-  const [linked, setLinked] = useState<string[]>([]);
+  /** التكاملات المقترحة من تحليل الموقع — للعرض فقط، الربط الحقيقي من صفحة التكاملات. */
+  const [recommended, setRecommended] = useState<string[]>([]);
 
   useEffect(() => {
     if (!workspace) return;
     setName((v) => v || workspace.name);
     setIndustry((v) => v || workspace.industry);
   }, [workspace]);
-
-  const providers = [...new Set((integrations ?? []).map((i) => i.provider))];
 
   const toggle = (list: string[], set: (v: string[]) => void, id: string) =>
     set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
@@ -104,16 +96,8 @@ function Onboarding() {
           meta: "ملاحظة · من الإعداد الأولي",
         });
       }
-      for (const i of integrations ?? []) {
-        const shouldLink = linked.includes(i.provider) && hired.includes(i.employee_id);
-        if (shouldLink && i.status !== "connected") {
-          await setIntegration.mutateAsync({
-            id: i.id,
-            status: "connected",
-            account: `${name || workspace.name} · ${appLabel(i.provider)}`,
-          });
-        }
-      }
+      // لا نضع أي حساب في حالة «مربوط» بلا OAuth حقيقي — الربط يتم من صفحة التكاملات
+      // لحظة الحاجة، وإلا ظنّ الموظفون أن النشر ممكن وهو ليس كذلك.
       // نور تبدأ العمل من أول يوم: 5 أفكار محتوى كل صباح بلا طلب منك
       try {
         await createAutomation({
@@ -209,7 +193,25 @@ function Onboarding() {
           {step === 0 ? (
             <div className="space-y-5">
               <h1 className="font-display text-2xl font-black md:text-3xl">عرّفنا على نشاطك</h1>
-              <p className="text-ink-soft">دقيقتان الآن توفّران عليك ساعات تصحيح لاحقاً.</p>
+              <p className="text-ink-soft">
+                أسهل طريقة: ضع رابط موقعك ونملأ كل شيء عنك تلقائياً — أو اكتب بنفسك.
+              </p>
+              {workspace ? (
+                <BusinessProfileCard
+                  workspaceId={workspace.id}
+                  compact
+                  onProfiled={(p) => {
+                    if (p.name) setName(p.name);
+                    if (p.industry && p.industry !== "عام") setIndustry(p.industry);
+                    const about = [p.summary, p.products.length ? `نبيع: ${p.products.join("، ")}` : "", p.audience ? `لمن: ${p.audience}` : ""]
+                      .filter(Boolean)
+                      .join("\n");
+                    if (about) setAbout(about);
+                    if (p.suggestedTone) setTone(p.suggestedTone);
+                    setRecommended(p.recommendedIntegrations.map((i) => i.provider));
+                  }}
+                />
+              ) : null}
               <label className="block">
                 <span className="mb-2 block text-sm font-bold">اسم النشاط</span>
                 <input
@@ -318,31 +320,31 @@ function Onboarding() {
 
           {step === 3 ? (
             <div className="space-y-5">
-              <h1 className="font-display text-2xl font-black md:text-3xl">اربط حساباتك</h1>
+              <h1 className="font-display text-2xl font-black md:text-3xl">حساباتك — عند الحاجة فقط</h1>
               <p className="text-ink-soft">
-                اختر المنصات التي سيعمل عليها فريقك — يمكنك تعديلها لاحقاً من صفحة التكاملات.
+                لا نطلب ربط أي حساب الآن. موظفوك يبدؤون العمل فوراً بما فهمناه من موقعك، وعندما تطلب نشراً أو
+                إرسالاً أو بيانات حقيقية سيطلب الموظف المعني ربط الحساب المحدد بضغطة واحدة عبر OAuth الرسمي.
               </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {providers.map((p) => {
-                  const on = linked.includes(p);
-                  return (
-                    <button
+              <div>
+                <p className="mb-2 text-sm font-bold">
+                  {recommended.length ? "الأعلى فائدة لنشاطك تحديداً:" : "أكثر الحسابات فائدة عادةً:"}
+                </p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {(recommended.length ? recommended : ["instagram", "search-console", "gmail", "wordpress", "analytics", "whatsapp"]).map((p) => (
+                    <div
                       key={p}
-                      onClick={() => toggle(linked, setLinked, p)}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-2xl border p-4 text-start transition-colors",
-                        on ? "border-jade bg-jade/8" : "border-border hover:bg-secondary/50",
-                      )}
+                      className="flex items-center gap-2.5 rounded-2xl border border-border p-4 text-start"
                     >
                       <AppIcon name={p} className="size-5 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                        {appLabel(p)}
-                      </span>
-                      {on ? <Check className="size-4 shrink-0 text-jade" /> : null}
-                    </button>
-                  );
-                })}
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{appLabel(p)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+              <p className="flex items-center gap-2 rounded-2xl bg-secondary/60 p-4 text-sm text-ink-soft">
+                <Sparkles className="size-4 shrink-0 text-jade" />
+                يمكنك ربط أي حساب في أي وقت من صفحة «التكاملات» — لا نحتفظ بأي كلمة مرور.
+              </p>
             </div>
           ) : null}
 

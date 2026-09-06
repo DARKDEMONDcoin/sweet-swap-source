@@ -66,6 +66,7 @@ function BrainPage() {
               website={(workspace as { website?: string | null }).website}
               profile={(workspace as { profile?: Record<string, unknown> }).profile as never}
               compact
+              className="mb-6"
             />
           ) : null}
           <BrandVoiceExtractor workspaceId={workspace?.id} />
