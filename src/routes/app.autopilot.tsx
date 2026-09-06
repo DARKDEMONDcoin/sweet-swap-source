@@ -53,6 +53,7 @@ const ZONES = [
 
 function AutopilotPage() {
   const { data: workspace } = useWorkspace();
+  const { data: profile } = useProfile();
   const { data: accounts } = useConnectedAccounts(workspace?.id);
   const qc = useQueryClient();
 
@@ -76,6 +77,13 @@ function AutopilotPage() {
   const [note, setNote] = useState<string | null>(null);
 
   const row = settings.data?.autopilot ?? null;
+  // لا إعدادات محفوظة بعد: نبدأ بلهجة المالك التي اختارها عند التسجيل ومنطقته الزمنية الفعلية.
+  useEffect(() => {
+    if (row || !profile) return;
+    if (profile.dialect) setDialect(profile.dialect);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && (TIMEZONES as readonly string[]).includes(tz)) setTimezone(tz);
+  }, [row, profile]);
   useEffect(() => {
     if (!row) return;
     setActive(row.active);
