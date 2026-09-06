@@ -127,7 +127,7 @@ function CalendarPage() {
     for (const t of targets) {
       setProgress({ done, total: targets.length, current: t.meta?.title ?? t.provider });
       try {
-        await gen({ data: { workspaceId: workspace.id, id: t.id, withImage, dialect: "خليجية" } });
+        await gen({ data: { workspaceId: workspace.id, id: t.id, withImage } });
       } catch (e) {
         setError(e instanceof Error ? e.message : "تعذّر توليد منشور");
       }
@@ -147,7 +147,6 @@ function CalendarPage() {
           perDay,
           providers,
           topic: topic.trim() || undefined,
-          dialect: "خليجية",
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Africa/Cairo",
         },
       }),
@@ -216,12 +215,22 @@ function CalendarPage() {
       }
     >
       {error ? (
-        <p className="mb-4 flex items-start justify-between gap-3 rounded-2xl bg-destructive/10 p-4 text-sm font-bold text-destructive">
-          {error}
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-2xl bg-destructive/10 p-4 text-sm font-bold text-destructive">
+          <span>
+            {error}
+            {/مربوط|اربط|ربط/.test(error) ? (
+              <>
+                {" "}
+                <Link to="/app/integrations" className="underline underline-offset-4">
+                  اربط الحساب الآن ←
+                </Link>
+              </>
+            ) : null}
+          </span>
           <button onClick={() => setError(null)} aria-label="إغلاق">
             <X className="size-4" />
           </button>
-        </p>
+        </div>
       ) : null}
 
       {learnMutation.data ? (
@@ -374,11 +383,11 @@ function CalendarPage() {
               connected={connected.has(selectedPost.provider)}
               busy={busy === selectedPost.id}
               onClose={() => setSelected(null)}
-              onGenerate={() => void act(selectedPost.id, () => gen({ data: { workspaceId: workspace!.id, id: selectedPost.id, withImage: true, dialect: "خليجية" } }))}
+              onGenerate={() => void act(selectedPost.id, () => gen({ data: { workspaceId: workspace!.id, id: selectedPost.id, withImage: true } }))}
               onRegenerate={() =>
                 void act(selectedPost.id, async () => {
                   await update({ data: { workspaceId: workspace!.id, id: selectedPost.id, action: "unapprove", imageUrl: null } });
-                  await gen({ data: { workspaceId: workspace!.id, id: selectedPost.id, withImage: true, dialect: "خليجية" } });
+                  await gen({ data: { workspaceId: workspace!.id, id: selectedPost.id, withImage: true } });
                 })
               }
               onApprove={() => void act(selectedPost.id, () => update({ data: { workspaceId: workspace!.id, id: selectedPost.id, action: "approve" } }))}

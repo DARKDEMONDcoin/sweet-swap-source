@@ -63,6 +63,36 @@ export function extractJson<T>(raw: string): T | null {
   }
 }
 
+/**
+ * وضع JSON في بعض المزوّدين يفرض كائناً جذرياً، فيعيد النموذج
+ * {"items":[...]} أو عنصراً واحداً بدل المصفوفة. نطبّع كل الأشكال إلى مصفوفة.
+ */
+export function extractJsonList<T extends object>(raw: string, requiredKey: keyof T): T[] {
+  const parsed = extractJson<unknown>(raw);
+  const isItem = (x: unknown): x is T => Boolean(x) && typeof x === "object" && requiredKey in (x as object);
+  if (Array.isArray(parsed)) return parsed.filter(isItem);
+  if (parsed && typeof parsed === "object") {
+    if (isItem(parsed)) return [parsed];
+    for (const v of Object.values(parsed as Record<string, unknown>)) {
+      if (Array.isArray(v)) {
+        const items = v.filter(isItem);
+        if (items.length) return items;
+      }
+    }
+  }
+  // احتياط أخير: عدة كائنات JSON متتالية بلا مصفوفة (NDJSON).
+  const out: T[] = [];
+  for (const m of raw.matchAll(/\{[^{}]*\}/g)) {
+    try {
+      const o = JSON.parse(m[0]) as unknown;
+      if (isItem(o)) out.push(o);
+    } catch {
+      /* تجاهل */
+    }
+  }
+  return out;
+}
+
 async function workspaceContext(admin: Admin, workspaceId: string) {
   const [{ data: ws }, { data: brain }, { data: linked }, { data: recent }] = await Promise.all([
     admin.from("workspaces").select("*").eq("id", workspaceId).maybeSingle(),
@@ -102,6 +132,34 @@ function systemFor(ctx: Awaited<ReturnType<typeof workspaceContext>>, dialect: s
     .join("\n\n");
 }
 
+
+const COUNTRY_DIALECT: Record<string, string> = {
+  EG: "مصرية", SA: "خليجية", AE: "خليجية", KW: "خليجية", QA: "خليجية", BH: "خليجية", OM: "خليجية",
+  JO: "شامية", LB: "شامية", SY: "شامية", PS: "شامية", IQ: "عراقية", YE: "يمنية",
+  MA: "مغربية", DZ: "جزائرية", TN: "تونسية", LY: "ليبية", SD: "سودانية", MR: "موريتانية",
+  مصر: "مصرية", السعودية: "خليجية", الإمارات: "خليجية", الكويت: "خليجية", قطر: "خليجية", البحرين: "خليجية", عمان: "خليجية",
+  الأردن: "شامية", لبنان: "شامية", سوريا: "شامية", فلسطين: "شامية", العراق: "عراقية", اليمن: "يمنية",
+  المغرب: "مغربية", الجزائر: "جزائرية", تونس: "تونسية", ليبيا: "ليبية", السودان: "سودانية",
+};
+
+/**
+ * لهجة الكتابة الفعلية لمساحة العمل: اختيار المالك عند التسجيل ← لهجة موقعه المكتشفة ← دولته ← مصرية (سوق «سهل» الأول).
+ * لا نفترض الخليجية أبداً كقيمة صامتة.
+ */
+export async function resolveDialect(admin: Admin, workspaceId: string, explicit?: string | null): Promise<string> {
+  if (explicit && explicit.trim()) return explicit.trim();
+  const { data: ws } = await admin.from("workspaces").select("owner_id, country, profile").eq("id", workspaceId).maybeSingle();
+  if (!ws) return "مصرية";
+  const { data: prof } = await admin.from("profiles").select("dialect").eq("id", ws.owner_id).maybeSingle();
+  if (prof?.dialect?.trim()) return prof.dialect.trim();
+  const p = (ws as { profile?: { dialect?: string } | null }).profile;
+  if (p && typeof p === "object" && typeof p.dialect === "string" && p.dialect.trim()) return p.dialect.trim();
+  const c = (ws as { country?: string | null }).country?.trim();
+  if (c && COUNTRY_DIALECT[c.toUpperCase()]) return COUNTRY_DIALECT[c.toUpperCase()]!;
+  if (c && COUNTRY_DIALECT[c]) return COUNTRY_DIALECT[c]!;
+  return "مصرية";
+}
+
 /* ---------------- 1) الخطة ---------------- */
 
 export type PlanInput = {
@@ -110,7 +168,7 @@ export type PlanInput = {
   perDay: number; // 1..3
   providers: string[];
   topic?: string | undefined;
-  dialect: string;
+  dialect?: string | undefined;
   timezone: string;
   startAt?: string | undefined;
 };
@@ -125,7 +183,7 @@ function slotDates(input: PlanInput): { at: Date; provider: string }[] {
   for (let d = 0; d < input.days; d += 1) {
     for (let i = 0; i < input.perDay; i += 1) {
       const hour = hours[i % hours.length]!;
-      const local = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + d + (d === 0 ? 1 : 0), hour, 0, 0));
+      const local = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 1 + d, hour, 0, 0));
       const utc = new Date(local.getTime() - offsetMin * 60_000);
       out.push({ at: utc, provider: input.providers[(d * input.perDay + i) % input.providers.length] ?? primary });
     }
@@ -138,7 +196,7 @@ function tzOffsetMinutes(tz: string, at: Date): number {
     const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(at);
     const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT+3";
     const m = name.match(/([+-])(\d{1,2})(?::?(\d{2}))?/);
-    if (!m) return 180;
+    if (!m) return /^(GMT|UTC)$/i.test(name.trim()) ? 0 : 180;
     const sign = m[1] === "-" ? -1 : 1;
     return sign * (Number(m[2]) * 60 + Number(m[3] ?? 0));
   } catch {
@@ -156,13 +214,14 @@ export async function planCalendar(admin: Admin, input: PlanInput): Promise<{ cr
     .filter(Boolean)
     .slice(0, 15);
 
-  const system = systemFor(ctx, input.dialect, input.topic ?? ctx.ws.industry);
+  const dialect = await resolveDialect(admin, input.workspaceId, input.dialect);
+  const system = systemFor(ctx, dialect, input.topic ?? ctx.ws.industry);
   const user = [
     `خطّط ${slots.length} فكرة منشور لتقويم محتوى ${input.days} يوماً على: ${input.providers.join("، ")}.`,
     input.topic ? `المحور المطلوب من المالك: ${input.topic}` : "بلا محور محدد — استند إلى نشاط العلامة وجمهورها.",
     `وزّع الأفكار على أعمدة المحتوى: ${PILLARS.join("، ")} — بلا تكرار، وبتنويع الهدف (وصول/تفاعل/رسائل/مبيعات).`,
     recentTitles.length ? `تجنّب تكرار ما نُشر مؤخراً: ${recentTitles.join(" | ")}` : "",
-    `أخرج JSON فقط: مصفوفة بطول ${slots.length} من عناصر بهذا الشكل:\n{"title":"عنوان قصير بالعربية","pillar":"أحد الأعمدة","angle":"زاوية المنشور بجملة","hook":"أول سطر يوقف التمرير (≤ 12 كلمة)","goal":"وصول|تفاعل|رسائل|مبيعات","imageIdea":"وصف بصري إنجليزي دقيق للصورة (مشهد، إضاءة، زاوية، بلا نص)"}`,
+    `أخرج JSON فقط بهذا الشكل بالضبط — كائن فيه مفتاح "items" يحوي مصفوفة بطول ${slots.length} (لا تُرجع عنصراً واحداً أبداً): {"items":[ ... ]} وكل عنصر بهذا الشكل:\n{"title":"عنوان قصير بالعربية","pillar":"أحد الأعمدة","angle":"زاوية المنشور بجملة","hook":"أول سطر يوقف التمرير (≤ 12 كلمة)","goal":"وصول|تفاعل|رسائل|مبيعات","imageIdea":"وصف بصري إنجليزي دقيق للصورة (مشهد، إضاءة، زاوية، بلا نص)"}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -172,8 +231,29 @@ export async function planCalendar(admin: Admin, input: PlanInput): Promise<{ cr
     timeoutMs: 60_000,
     maxTokens: 3500,
   });
-  const ideas = extractJson<PostMeta[]>(raw);
-  if (!Array.isArray(ideas) || !ideas.length) throw new Error("لم أستطع تكوين خطة الآن — حاول مرة أخرى.");
+  let ideas = extractJsonList<PostMeta>(raw, "title");
+  if (ideas.length && ideas.length < slots.length) {
+    // النموذج أعاد أقل من المطلوب: نكمل بجولة ثانية بدل أن نكرّر الفكرة نفسها على الأيام.
+    try {
+      const more = await freeChat(
+        "",
+        [
+          { role: "system", content: system },
+          { role: "user", content: user },
+          { role: "assistant", content: JSON.stringify({ items: ideas }) },
+          { role: "user", content: `ممتاز. أكمل ${slots.length - ideas.length} فكرة إضافية مختلفة تماماً عن السابقة بنفس الشكل {"items":[...]}.` },
+        ],
+        { json: true, timeoutMs: 60_000, maxTokens: 3500 },
+      );
+      ideas = [...ideas, ...extractJsonList<PostMeta>(more, "title")];
+    } catch (e) {
+      console.warn("[calendar] second planning round failed:", e);
+    }
+  }
+  if (!ideas.length) {
+    console.error("[calendar] plan parse failed; raw:", raw.slice(0, 400));
+    throw new Error("لم أستطع تكوين خطة الآن — حاول مرة أخرى.");
+  }
 
   const batch = `plan-${Date.now().toString(36)}`;
   const rows = slots.map((s, i) => {
@@ -208,7 +288,7 @@ export async function generateCalendarPost(
   admin: Admin,
   workspaceId: string,
   postId: string,
-  opts: { withImage: boolean; dialect: string },
+  opts: { withImage: boolean; dialect?: string | undefined },
 ): Promise<{ id: string; body: string; imageUrl: string | null }> {
   const { data: post } = await admin.from("social_posts").select("*").eq("id", postId).eq("workspace_id", workspaceId).maybeSingle();
   if (!post) throw new Error("المنشور غير موجود.");
@@ -216,7 +296,8 @@ export async function generateCalendarPost(
   const ctx = await workspaceContext(admin, workspaceId);
   const { freeChat } = await import("./nour-research.server");
 
-  const system = systemFor(ctx, opts.dialect, meta.title ?? post.body);
+  const dialect = await resolveDialect(admin, workspaceId, opts.dialect);
+  const system = systemFor(ctx, dialect, meta.title ?? post.body);
   const user = [
     `اكتب المنشور النهائي لمنصة ${post.provider}.`,
     `العنوان/الفكرة: ${meta.title ?? ""}`,
@@ -405,8 +486,9 @@ export async function learnFromPerformance(admin: Admin, workspaceId: string): P
 
 /* ---------------- 4) أفكار اليوم ---------------- */
 
-export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "خليجية"): Promise<{ title: string; hook: string; provider: string; prompt: string }[]> {
+export async function dailyIdeas(admin: Admin, workspaceId: string, dialectHint?: string | null): Promise<{ title: string; hook: string; provider: string; prompt: string }[]> {
   const ctx = await workspaceContext(admin, workspaceId);
+  const dialect = await resolveDialect(admin, workspaceId, dialectHint);
   const { freeChat } = await import("./nour-research.server");
   const day = new Date().toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" });
   const raw = await freeChat(
@@ -421,13 +503,7 @@ export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "�
     { json: true, timeoutMs: 40_000, maxTokens: 600 },
   );
   type Idea = { title: string; hook: string; provider: string };
-  const parsed = extractJson<Idea[] | Record<string, unknown>>(raw);
-  const ideas: Idea[] = Array.isArray(parsed)
-    ? parsed
-    : parsed && typeof parsed === "object"
-      ? ((Object.values(parsed).find((v) => Array.isArray(v)) as Idea[] | undefined) ??
-        ("title" in parsed || "hook" in parsed ? [parsed as unknown as Idea] : []))
-      : [];
+  const ideas: Idea[] = extractJsonList<Idea>(raw, "title");
   if (!ideas.length) console.warn("[dailyIdeas] empty result; raw:", String(raw).slice(0, 300));
   return ideas.filter((i) => i && (i.title || i.hook)).slice(0, 3).map((i) => ({
     title: String(i.title ?? "").slice(0, 100),

@@ -108,7 +108,7 @@ export async function buildBriefing(admin: Admin, workspaceId: string): Promise<
   let ideas: Briefing["ideas"] = [];
   try {
     const { dailyIdeas } = await import("./content-calendar.server");
-    ideas = await dailyIdeas(admin, workspaceId, auto?.dialect ?? "خليجية");
+    ideas = await dailyIdeas(admin, workspaceId, auto?.dialect ?? null);
   } catch (e) {
     console.error("[briefing] ideas failed", e instanceof Error ? e.message : e);
   }

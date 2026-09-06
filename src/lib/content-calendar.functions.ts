@@ -16,7 +16,7 @@ export const planContentCalendar = createServerFn({ method: "POST" })
         perDay: z.number().int().min(1).max(3),
         providers: z.array(z.string()).min(1).max(6),
         topic: z.string().max(300).optional(),
-        dialect: z.string().max(30).default("خليجية"),
+        dialect: z.string().max(30).optional(),
         timezone: z.string().max(60).default("Africa/Cairo"),
       })
       .parse(input),
@@ -41,7 +41,7 @@ export const planContentCalendar = createServerFn({ method: "POST" })
 export const generateCalendarPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ ...ws, id: z.string().uuid(), withImage: z.boolean().default(true), dialect: z.string().max(30).default("خليجية") }).parse(input),
+    z.object({ ...ws, id: z.string().uuid(), withImage: z.boolean().default(true), dialect: z.string().max(30).optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { data: own } = await context.supabase.from("social_posts").select("id").eq("id", data.id).eq("workspace_id", data.workspaceId).maybeSingle();
