@@ -26,10 +26,78 @@ export function imageUrl(prompt: string, opts: ImageOptions = {}): string {
     height: String(height),
     model: "flux",
     nologo: "true",
-    enhance: "true",
+    // لا «تحسين» تلقائي للوصف: كان يبدّل الموضوع ويعطي صوراً لا علاقة لها بالطلب.
+    enhance: "false",
     ...(seed !== undefined ? { seed: String(seed) } : {}),
   });
   return `${POLLINATIONS}/${encodeURIComponent(prompt.slice(0, 900))}?${q}`;
+}
+
+export type ImageBriefInput = {
+  /** طلب المستخدم الأصلي (بالعربية غالباً). */
+  request: string;
+  /** عنوان المخرج/المنشور. */
+  title?: string | null | undefined;
+  /** أول أسطر نص المنشور — يحمل المنتج/العرض/المكان الفعلي. */
+  body?: string | null | undefined;
+  brand?: { name?: string; industry?: string; country?: string | null } | undefined;
+  /** وصف كتبه النموذج مسبقاً (قد يكون عاماً) — يُستخدم كإلهام لا كمرجع. */
+  draft?: string | null | undefined;
+  /** نسبة الأبعاد المستهدفة. */
+  aspect?: "square" | "portrait" | "landscape";
+};
+
+/**
+ * «مخرج صور»: يحوّل الطلب الفعلي إلى وصف تصويري يُظهر الموضوع نفسه (المنتج، المكان،
+ * العرض) لا صورة عامة — عبر نداء قصير سريع، مع احتياط حتمي إن تعذّر النداء.
+ */
+export async function imageBrief(input: ImageBriefInput): Promise<string> {
+  const subject = [input.title, input.request].filter(Boolean).join(" — ").slice(0, 300);
+  const fallback = [
+    `Photorealistic commercial photograph that clearly shows: ${subject}.`,
+    input.brand?.industry ? `Business: ${input.brand.industry}.` : "",
+    input.brand?.country ? `Setting: ${input.brand.country}, Middle East.` : "Setting: Middle East / Arab world.",
+    "Hero subject centered and unmistakable, natural light, high detail, premium look, 8k.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  try {
+    const { freeChat } = await import("./nour-research.server");
+    const raw = await freeChat(
+      "",
+      [
+        {
+          role: "system",
+          content:
+            "You are an art director for social media. Write ONE English image-generation prompt (max 70 words) that depicts EXACTLY the concrete subject of the post: the specific product/dish/service/place/offer named by the user. Rules: 1) Name the subject explicitly in the first sentence. 2) Describe scene, props, lighting, angle, mood matching the Arab/Middle-Eastern market. 3) Never invent a different subject. 4) No text, letters, logos, watermarks. Output the prompt only.",
+        },
+        {
+          role: "user",
+          content: [
+            `User request (Arabic): ${input.request.slice(0, 600)}`,
+            input.title ? `Post title: ${input.title}` : "",
+            input.body ? `Post text (excerpt): ${input.body.slice(0, 500)}` : "",
+            input.brand?.name ? `Brand: ${input.brand.name} (${input.brand.industry ?? ""})` : "",
+            input.brand?.country ? `Country: ${input.brand.country}` : "",
+            input.draft ? `Draft idea from writer (may be generic, fix it): ${input.draft.slice(0, 300)}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        },
+      ],
+      { timeoutMs: 12_000, maxTokens: 160, budgetMs: 15_000, race: true },
+    );
+    const clean = raw
+      .replace(/^```[a-z]*\n?|```$/gim, "")
+      .replace(/^(prompt|image prompt)\s*[:：]\s*/i, "")
+      .replace(/[\u0600-\u06FF]+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (clean.length < 40) return fallback + NO_TEXT;
+    return clean.slice(0, 850) + NO_TEXT;
+  } catch {
+    return fallback + NO_TEXT;
+  }
 }
 
 /** يولّد الصورة فعلياً ويعيد بايتاتها (للرفع إلى التخزين أو النشر إلى ووردبريس). */

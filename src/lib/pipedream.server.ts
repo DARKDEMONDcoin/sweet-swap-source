@@ -105,12 +105,40 @@ async function call<T>(
     if (text.includes("Auth provision not found")) {
       throw new Error("الحساب لم يعد مربوطاً — أعد ربطه من صفحة التكاملات ثم أعد المحاولة.");
     }
-    // طلبات الوكيل تنقل خطأ المنصة نفسها، لا خطأ الوسيط — نوضّح ذلك للمستخدم.
+    // طلبات الوكيل تنقل خطأ المنصة نفسها، لا خطأ الوسيط — نترجمه لسبب وحل مفهومين.
+    const friendly = explainPlatformError(text);
+    if (friendly) throw new Error(friendly);
     const source = path.startsWith("/proxy/") ? "المنصة رفضت الطلب" : "الوسيط رفض الطلب";
     throw new Error(`${source} [${res.status}]: ${text.slice(0, 200)}`);
-
   }
   return (text ? JSON.parse(text) : {}) as T;
+}
+
+/** يترجم أخطاء Graph API (ميتا) وأمثالها إلى سبب + حل بالعربية. */
+export function explainPlatformError(raw: string): string | null {
+  let code: number | undefined;
+  let message = "";
+  try {
+    const j = JSON.parse(raw) as { error?: { code?: number; message?: string; error_subcode?: number } };
+    code = j.error?.code;
+    message = j.error?.message ?? "";
+  } catch {
+    message = raw;
+  }
+  if (/pages_manage_posts|pages_read_engagement/.test(message) || code === 283 || (code === 200 && /permission/i.test(message))) {
+    return (
+      "فيسبوك رفض النشر لأن الربط لا يملك صلاحية النشر (pages_manage_posts / pages_read_engagement). " +
+      "افصل فيسبوك من صفحة التكاملات وأعد ربطه مع قبول كل الصلاحيات؛ وإن لم تُعرض هذه الصلاحيات في نافذة فيسبوك، " +
+      "فيلزم ربط تطبيق ميتا الخاص بكم (OAuth client) في إعدادات Pipedream ثم إعادة الربط."
+    );
+  }
+  if (code === 190) return "انتهت صلاحية ربط فيسبوك/إنستجرام — أعد ربط الحساب من صفحة التكاملات.";
+  if (code === 10) return "التطبيق لا يملك الإذن لهذا الإجراء على هذه الصفحة — تأكد أنك مسؤول (Admin) عن الصفحة ثم أعد الربط.";
+  if (code === 368) return "فيسبوك حظر النشر مؤقتاً على هذه الصفحة (سياسة المجتمع) — حاول لاحقاً أو راجع إشعارات الصفحة.";
+  if (code === 9 || code === 4 || code === 17 || code === 32) return "تجاوزت حد الطلبات المسموح لدى المنصة — انتظر قليلاً ثم أعد المحاولة.";
+  if (code === 100 && /image|media|url/i.test(message)) return "المنصة رفضت الصورة — تأكد أن رابط الصورة عام ومباشر (JPG/PNG) وحجمها أقل من 8 ميجابايت.";
+  if (code === 9004 || /instagram.*(media|container)/i.test(message)) return "إنستجرام تعذّر تحميل الوسائط — استخدم صورة JPG عامة بنسبة بين 4:5 و1.91:1.";
+  return null;
 }
 
 /** معرّف المستخدم لدى Pipedream = مساحة العمل (كل ربط يخص العلامة لا الشخص). */

@@ -19,3 +19,11 @@
 - [ ] Publish so cron endpoints exist on production URL
 - [x] Nour hardest-request E2E: fixed 3-min hang (GPT-5 90s timeout retried) → total AI budget, no timeout retries, fast model first for long outputs; long-form 6000 tokens; JSON salvage; research budget 22s
 - [x] Briefing stats: Arabic zero rendered as a dot → western digits
+
+## Round 3 (user request 12:01)
+- [x] Chat: publish target follows the platform the user names (platforms.ts; no silent fallback; connect chip)
+- [x] Facebook rejection: root cause = read-only scopes (pages_show_list only). Preflight scope check + Arabic explanation + sync warning; custom Meta OAuth client via secret PIPEDREAM_OAUTH_APP_FACEBOOK
+- [x] Image director (imageBrief) anchored on user request + post text; enhance=false
+- [x] Chat tools: SEO audit, rank check, calendar plan, daily ideas, performance learning run for real from chat
+- [x] PublishPanel: manual edit, keep/remove generated image, upload image/video from device, multi-slot scheduling; message actions copy/share/download/edit/regenerate
+- [ ] E2E browser test of new PublishPanel + Facebook relink with publish scopes (needs Meta OAuth client / user relink)

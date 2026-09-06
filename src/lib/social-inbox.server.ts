@@ -20,6 +20,56 @@ type MeAccounts = {
   }[];
 };
 
+/** الصلاحيات التي منحها المستخدم فعلاً لتطبيق ميتا عند الربط. */
+export async function metaPermissions(
+  config: PipedreamConfig,
+  workspaceId: string,
+  accountId: string,
+): Promise<string[]> {
+  const res = await proxyRequest<{ data?: { permission: string; status: string }[] }>(config, {
+    workspaceId,
+    accountId,
+    url: `${GRAPH}/me/permissions`,
+  });
+  return (res.data ?? []).filter((p) => p.status === "granted").map((p) => p.permission);
+}
+
+/** الصلاحيات اللازمة للنشر على صفحة فيسبوك/إنستجرام. */
+export const META_PUBLISH_SCOPES = ["pages_manage_posts", "pages_read_engagement"] as const;
+
+/**
+ * يتحقق أن الربط يسمح بالنشر فعلاً؛ وإلا يرمي رسالة عربية واضحة بالحل بدل خطأ Graph الخام.
+ * السبب الشائع: تطبيق ميتا الافتراضي لدى الوسيط يطلب «عرض الصفحات» فقط.
+ */
+export async function assertMetaPublishScopes(
+  config: PipedreamConfig,
+  workspaceId: string,
+  accountId: string,
+  provider: "facebook" | "instagram",
+): Promise<void> {
+  let granted: string[] = [];
+  try {
+    granted = await metaPermissions(config, workspaceId, accountId);
+  } catch {
+    return; // لا نمنع النشر إن تعذّر الفحص — Graph سيرد بخطأ صريح إن لزم.
+  }
+  const needed: string[] = [...META_PUBLISH_SCOPES];
+  if (provider === "instagram") needed.push("instagram_basic", "instagram_content_publish");
+  const missing = needed.filter((s) => !granted.includes(s));
+  if (!missing.length) return;
+  throw new Error(missingMetaScopesMessage(provider, missing));
+}
+
+export function missingMetaScopesMessage(provider: "facebook" | "instagram", missing: string[]): string {
+  const name = provider === "facebook" ? "فيسبوك" : "إنستجرام";
+  return (
+    `${name} منح صلاحية عرض الصفحات فقط ولم يمنح صلاحية النشر (${missing.join("، ")}). ` +
+    `الحل: افصل ${name} من صفحة التكاملات ثم أعد ربطه، وفي نافذة فيسبوك اقبل كل الصلاحيات المطلوبة ` +
+    `(إدارة المنشورات والتفاعل). إن لم تظهر هذه الصلاحيات في النافذة أصلاً، فالربط يستخدم تطبيق ميتا الافتراضي ` +
+    `الذي لا يطلبها — ويلزم ربط تطبيق ميتا الخاص بكم في إعدادات Pipedream (OAuth client) ثم إعادة الربط.`
+  );
+}
+
 /** أول صفحة مرتبطة بالحساب مع توكن الصفحة اللازم للرد كصفحة. */
 export async function pageTarget(
   config: PipedreamConfig,
