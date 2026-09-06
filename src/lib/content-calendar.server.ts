@@ -342,12 +342,10 @@ export async function learnFromPerformance(admin: Admin, workspaceId: string): P
     }
   }
 
-  let sample = live.map((l) => ({ text: l.text, likes: l.likes, comments: l.comments, provider: l.provider, at: l.at }));
+  let sample: { text: string; likes: number; comments: number; provider: string; at: string }[] = live.map((l) => ({ text: l.text, likes: l.likes, comments: l.comments, provider: l.provider as string, at: l.at }));
   let source: "live" | "internal" | "none" = live.length ? "live" : "none";
   if (!sample.length) {
-    const { data: internal } = await admin
-      .from("social_posts")
-      .select("body, provider, published_at, metrics")
+    const { data: internal } = await (admin.from("social_posts") as unknown as { select: (s: string) => any }).select("body, provider, published_at, metrics")
       .eq("workspace_id", workspaceId)
       .eq("status", "published")
       .not("metrics", "is", null)
