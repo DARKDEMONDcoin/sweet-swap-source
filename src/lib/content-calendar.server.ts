@@ -155,7 +155,7 @@ function slotDates(input: PlanInput): { at: Date; provider: string }[] {
   for (let d = 0; d < input.days; d += 1) {
     for (let i = 0; i < input.perDay; i += 1) {
       const hour = hours[i % hours.length]!;
-      const local = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + d + (d === 0 ? 1 : 0), hour, 0, 0));
+      const local = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 1 + d, hour, 0, 0));
       const utc = new Date(local.getTime() - offsetMin * 60_000);
       out.push({ at: utc, provider: input.providers[(d * input.perDay + i) % input.providers.length] ?? primary });
     }
