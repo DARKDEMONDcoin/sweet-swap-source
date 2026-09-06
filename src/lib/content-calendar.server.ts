@@ -192,7 +192,7 @@ export async function planCalendar(admin: Admin, input: PlanInput): Promise<{ cr
     input.topic ? `المحور المطلوب من المالك: ${input.topic}` : "بلا محور محدد — استند إلى نشاط العلامة وجمهورها.",
     `وزّع الأفكار على أعمدة المحتوى: ${PILLARS.join("، ")} — بلا تكرار، وبتنويع الهدف (وصول/تفاعل/رسائل/مبيعات).`,
     recentTitles.length ? `تجنّب تكرار ما نُشر مؤخراً: ${recentTitles.join(" | ")}` : "",
-    `أخرج JSON فقط: مصفوفة بطول ${slots.length} من عناصر بهذا الشكل:\n{"title":"عنوان قصير بالعربية","pillar":"أحد الأعمدة","angle":"زاوية المنشور بجملة","hook":"أول سطر يوقف التمرير (≤ 12 كلمة)","goal":"وصول|تفاعل|رسائل|مبيعات","imageIdea":"وصف بصري إنجليزي دقيق للصورة (مشهد، إضاءة، زاوية، بلا نص)"}`,
+    `أخرج JSON فقط بهذا الشكل بالضبط — كائن فيه مفتاح "items" يحوي مصفوفة بطول ${slots.length} (لا تُرجع عنصراً واحداً أبداً): {"items":[ ... ]} وكل عنصر بهذا الشكل:\n{"title":"عنوان قصير بالعربية","pillar":"أحد الأعمدة","angle":"زاوية المنشور بجملة","hook":"أول سطر يوقف التمرير (≤ 12 كلمة)","goal":"وصول|تفاعل|رسائل|مبيعات","imageIdea":"وصف بصري إنجليزي دقيق للصورة (مشهد، إضاءة، زاوية، بلا نص)"}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -202,8 +202,29 @@ export async function planCalendar(admin: Admin, input: PlanInput): Promise<{ cr
     timeoutMs: 60_000,
     maxTokens: 3500,
   });
-  const ideas = extractJson<PostMeta[]>(raw);
-  if (!Array.isArray(ideas) || !ideas.length) throw new Error("لم أستطع تكوين خطة الآن — حاول مرة أخرى.");
+  let ideas = extractJsonList<PostMeta>(raw, "title");
+  if (ideas.length && ideas.length < slots.length) {
+    // النموذج أعاد أقل من المطلوب: نكمل بجولة ثانية بدل أن نكرّر الفكرة نفسها على الأيام.
+    try {
+      const more = await freeChat(
+        "",
+        [
+          { role: "system", content: system },
+          { role: "user", content: user },
+          { role: "assistant", content: JSON.stringify({ items: ideas }) },
+          { role: "user", content: `ممتاز. أكمل ${slots.length - ideas.length} فكرة إضافية مختلفة تماماً عن السابقة بنفس الشكل {"items":[...]}.` },
+        ],
+        { json: true, timeoutMs: 60_000, maxTokens: 3500 },
+      );
+      ideas = [...ideas, ...extractJsonList<PostMeta>(more, "title")];
+    } catch (e) {
+      console.warn("[calendar] second planning round failed:", e);
+    }
+  }
+  if (!ideas.length) {
+    console.error("[calendar] plan parse failed; raw:", raw.slice(0, 400));
+    throw new Error("لم أستطع تكوين خطة الآن — حاول مرة أخرى.");
+  }
 
   const batch = `plan-${Date.now().toString(36)}`;
   const rows = slots.map((s, i) => {
