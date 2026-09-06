@@ -415,7 +415,7 @@ export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "�
       { role: "system", content: systemFor(ctx, dialect, ctx.ws.industry) },
       {
         role: "user",
-        content: `اليوم ${day}. اقترح 3 أفكار منشورات قابلة للنشر اليوم لهذه العلامة (مختلفة الأعمدة، مرتبطة بالموسم/اليوم إن أمكن). أخرج JSON فقط: [{"title":"…","hook":"أول سطر ≤ 12 كلمة","provider":"instagram|facebook|linkedin|x|tiktok"}]`,
+        content: `اليوم ${day}. اقترح 3 أفكار منشورات قابلة للنشر اليوم لهذه العلامة (مختلفة الأعمدة، مرتبطة بالموسم/اليوم إن أمكن). أخرج JSON فقط بهذا الشكل بالضبط (كائن فيه مصفوفة من 3 عناصر): {"ideas":[{"title":"…","hook":"أول سطر ≤ 12 كلمة","provider":"instagram|facebook|linkedin|x|tiktok"},{…},{…}]}`,
       },
     ],
     { json: true, timeoutMs: 40_000, maxTokens: 600 },
@@ -425,7 +425,8 @@ export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "�
   const ideas: Idea[] = Array.isArray(parsed)
     ? parsed
     : parsed && typeof parsed === "object"
-      ? ((Object.values(parsed).find((v) => Array.isArray(v)) as Idea[] | undefined) ?? [])
+      ? ((Object.values(parsed).find((v) => Array.isArray(v)) as Idea[] | undefined) ??
+        ("title" in parsed || "hook" in parsed ? [parsed as unknown as Idea] : []))
       : [];
   if (!ideas.length) console.warn("[dailyIdeas] empty result; raw:", String(raw).slice(0, 300));
   return ideas.filter((i) => i && (i.title || i.hook)).slice(0, 3).map((i) => ({
