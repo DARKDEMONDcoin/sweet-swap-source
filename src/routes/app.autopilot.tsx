@@ -82,7 +82,7 @@ function AutopilotPage() {
     if (row || !profile) return;
     if (profile.dialect) setDialect(profile.dialect);
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz && (TIMEZONES as readonly string[]).includes(tz)) setTimezone(tz);
+    if (tz && (ZONES as readonly string[]).includes(tz)) setTimezone(tz);
   }, [row, profile]);
   useEffect(() => {
     if (!row) return;
