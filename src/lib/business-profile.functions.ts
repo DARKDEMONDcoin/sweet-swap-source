@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import type { BusinessProfile } from "@/lib/business-profile.server";
 
 /**
@@ -45,7 +47,7 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-type Client = Parameters<Parameters<typeof requireSupabaseAuth.server>[0]>[0]["context"]["supabase"];
+type Client = SupabaseClient<Database>;
 
 async function saveProfile(supabase: Client, workspaceId: string, url: string, profile: BusinessProfile) {
   const website = url ? (/^https?:\/\//i.test(url) ? url : `https://${url}`) : null;
