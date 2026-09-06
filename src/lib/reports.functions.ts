@@ -114,5 +114,6 @@ export const buildReport = createServerFn({ method: "POST" })
       },
       opportunities,
       notes,
+      sources: { search: gscRes.status, analytics: ga4Res.status },
     };
   });
