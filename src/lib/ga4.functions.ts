@@ -101,7 +101,7 @@ export async function ga4SnapshotDetailed(
     const num = (v?: string) => Number(v ?? 0) || 0;
     const t = totals.rows?.[0]?.metricValues ?? [];
 
-    return {
+    const snapshot: Ga4Snapshot = {
       property: propertyId,
       range: { start, end },
       totals: {
@@ -118,8 +118,14 @@ export async function ga4SnapshotDetailed(
         sessions: num(r.metricValues?.[0]?.value),
       })),
     };
-  } catch {
-    return null;
+    return { status: { state: "ok", message: `GA4 · ${propertyId}` }, snapshot };
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    const message = /401|403|invalid_grant|unauth|PERMISSION_DENIED/i.test(raw)
+      ? "انتهت صلاحية ربط Google أو لا تملك صلاحية على هذه الخاصية — أعد ربط Analytics من صفحة التكاملات."
+      : `تعذّر جلب بيانات GA4: ${raw.slice(0, 160)}`;
+    console.error("[ga4] snapshot failed", raw);
+    return { status: { state: "error", message }, snapshot: null };
   }
 }
 
