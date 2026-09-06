@@ -113,6 +113,18 @@ export const askEmployee = createServerFn({ method: "POST" })
       longForm ? 22_000 : 12_000,
     );
 
+    // المنصة التي سمّاها المستخدم بنفسه — تُحترم حرفياً ولا تُبدَّل بغيرها.
+    const { requestedPublishTargets, providerLabel } = await import("./platforms");
+    const askedTargets = requestedPublishTargets(data.message);
+    const askedBlock = askedTargets.length
+      ? `## المنصة التي طلبها المستخدم صراحةً\nالمستخدم طلب: ${askedTargets.map((p) => `${providerLabel(p)} (${p})`).join("، ")}. ` +
+        `اجعل "channel" في المخرج هو "${askedTargets[0]}" حرفياً، وكيّف النص لقواعد هذه المنصة (الطول، النبرة، الهاشتاقات). ` +
+        `لا تقترح منصة أخرى بدلاً منها. ` +
+        (askedTargets.some((p) => !connected.includes(p))
+          ? `تنبيه: ${askedTargets.filter((p) => !connected.includes(p)).map(providerLabel).join(" و")} غير مربوط بعد — أنجز المخرج كاملاً، وضع في needs_connection المنصة "${askedTargets.find((p) => !connected.includes(p))}" بسبب قصير.`
+          : `هذه المنصة مربوطة — أنجز المخرج جاهزاً للنشر عليها مباشرة.`)
+      : "";
+
     const teamActivity = (recentTasks ?? [])
       .map((t) => {
         const who = employeeDirectory[t.employee_id as EmployeeId]?.name ?? t.employee_id;
@@ -149,6 +161,7 @@ export const askEmployee = createServerFn({ method: "POST" })
       teamActivity ? `## آخر ما أنجزه الفريق\n${teamActivity}` : "",
       research.block ? `${evidenceRules}\n\n## أدلة ميدانية (لحظية)\n${research.block}` : "",
       actionTruthRules,
+      askedBlock,
       "## أسلوب المحادثة",
       "أجب دائماً بالعربية. التحية والأسئلة القصيرة: رد قصير ودافئ بجملة أو اثنتين ثم اقتراح عملي واحد. طلبات العمل: مخرج كامل جاهز مباشرة.",
       "إن كان طلب المستخدم يحتاج صورة (تصميم، منشور بصري، صورة مقال، كرييتف) فاكتب وصفاً بصرياً إنجليزياً دقيقاً في الحقل image_prompt — وستُولَّد الصورة فعلياً وتُعرض للمستخدم؛ لا تكتفِ بوصفها في النص.",
@@ -192,12 +205,18 @@ export const askEmployee = createServerFn({ method: "POST" })
       const replies = items.map((x) => (typeof x.reply === "string" ? x.reply.trim() : "")).filter(Boolean);
       deliverables = items
         .map((x) => x.deliverable)
-        .filter((d): d is Deliverable => Boolean(d?.title && d.body));
+        .filter((d): d is Deliverable => Boolean(d?.title && d.body))
+        .map((d) => (askedTargets[0] ? { ...d, channel: askedTargets[0] } : d));
       const nc = items.map((x) => x.needs_connection).find((n) => n && typeof n === "object" && typeof n.provider === "string");
       // لا نعرض زر ربط لحساب مربوط فعلاً أو لمنصة لا تخص هذا الموظف.
       if (nc && !connected.includes(nc.provider)) {
         const allowed = employeeDirectory[data.employeeId as EmployeeId]?.integrations.some((i) => i.provider === nc.provider);
         if (allowed) needsConnection = { provider: nc.provider, reason: String(nc.reason ?? "").slice(0, 160) };
+      }
+      // إن طلب المستخدم منصة غير مربوطة ولم يذكرها النموذج، نطلب ربطها نحن.
+      const askedMissing = askedTargets.find((p) => !connected.includes(p));
+      if (!needsConnection && askedMissing && deliverables.length) {
+        needsConnection = { provider: askedMissing, reason: `طلبت النشر على ${providerLabel(askedMissing)}` };
       }
       if (replies.length) {
         reply = replies.join("\n\n");
@@ -223,12 +242,21 @@ export const askEmployee = createServerFn({ method: "POST" })
     let imageUrl: string | null = null;
     if (VISUAL_EMPLOYEES.has(data.employeeId)) {
       try {
-        const { ownedHeroImage, extractImagePrompt } = await import("./image-gen.server");
+        const { ownedHeroImage, extractImagePrompt, imageBrief } = await import("./image-gen.server");
         const fromField = deliverables.map((d) => d.image_prompt).find((p) => typeof p === "string" && p.trim().length > 30);
-        const prompt =
-          (fromField ? `${fromField.trim()} No text, no letters, no watermark, no logo.` : null) ??
+        const draft =
+          (fromField ? fromField.trim() : null) ??
           extractImagePrompt(`${reply}\n${deliverables.map((d) => d.body ?? "").join("\n")}`);
-        if (prompt) {
+        const wantsVisual = Boolean(draft) || deliverables.some((d) => d.body && d.body.length > 80);
+        if (wantsVisual) {
+          // «مخرج صور»: الوصف يُشتق من طلب المستخدم نفسه ومن المخرج، حتى تعكس الصورة الموضوع فعلاً.
+          const prompt = await imageBrief({
+            request: data.message,
+            title: deliverables[0]?.title ?? null,
+            body: deliverables[0]?.body ?? reply,
+            brand: { name: workspace?.name, industry: workspace?.industry, country: workspace?.country ?? null },
+            draft,
+          });
           imageUrl = await ownedHeroImage(
             supabase as unknown as Parameters<typeof ownedHeroImage>[0],
             data.workspaceId,

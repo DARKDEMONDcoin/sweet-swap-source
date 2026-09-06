@@ -19,3 +19,12 @@
 - [ ] Publish so cron endpoints exist on production URL
 - [x] Nour hardest-request E2E: fixed 3-min hang (GPT-5 90s timeout retried) → total AI budget, no timeout retries, fast model first for long outputs; long-form 6000 tokens; JSON salvage; research budget 22s
 - [x] Briefing stats: Arabic zero rendered as a dot → western digits
+
+## Round 3 (user request 12:01)
+- [ ] Chat: publish target must follow the platform the user names (LinkedIn ≠ Facebook) + connection check
+- [ ] Facebook "المنصة رفضت الطلب" after connecting page — diagnose real Graph error and surface it
+- [ ] Image prompts tied to the actual topic/reply (topic-anchored image_prompt)
+- [ ] Real info for Nour/Siraj (live research evidence in chat)
+- [ ] Chat can trigger section features (calendar plan, schedule, queue) from chat
+- [ ] User freedom: edit text manually, toggle image, pick time/quantity, attach own image/video; message actions (copy/share/regenerate)
+- [ ] Test everything E2E

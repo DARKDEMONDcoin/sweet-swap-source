@@ -110,11 +110,17 @@ function IntegrationsPage() {
     // وإلا يُمسح `?pd=connected` قبل بدء المزامنة فيظهر الربط كأنه لم يحدث.
   }, []);
 
+  /** تحذيرات صلاحيات بعد المزامنة (مثل فيسبوك بلا صلاحية نشر). */
+  const [scopeWarnings, setScopeWarnings] = useState<{ provider: string; message: string }[]>([]);
+
   useEffect(() => {
     if (!pendingSync || !workspace) return;
     setPendingSync(false);
     void syncAccounts({ data: { workspaceId: workspace.id } })
-      .then(() => qc.invalidateQueries({ queryKey: ["integrations", workspace.id] }))
+      .then((r) => {
+        setScopeWarnings(r.warnings ?? []);
+        return qc.invalidateQueries({ queryKey: ["integrations", workspace.id] });
+      })
       .catch(() => setError("تم الربط لكن تعذّرت المزامنة — اضغط «تحديث الحسابات»."));
   }, [pendingSync, workspace, qc, syncAccounts]);
 
@@ -127,7 +133,8 @@ function IntegrationsPage() {
     setBusy("sync");
     setError(null);
     try {
-      await syncAccounts({ data: { workspaceId: workspace.id } });
+      const r = await syncAccounts({ data: { workspaceId: workspace.id } });
+      setScopeWarnings(r.warnings ?? []);
       void qc.invalidateQueries({ queryKey: ["integrations", workspace.id] });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّرت مزامنة الحسابات");
@@ -259,6 +266,27 @@ function IntegrationsPage() {
           {error}
         </p>
       ) : null}
+
+      {scopeWarnings.map((w) => (
+        <div
+          key={w.provider}
+          className="mb-6 flex items-start gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4 text-sm"
+        >
+          <AppIcon name={w.provider} className="mt-0.5 size-6 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-black">{appLabel(w.provider)} مربوط لكن بلا صلاحية نشر</p>
+            <p className="mt-1 leading-relaxed text-ink-soft">{w.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setScopeWarnings((s) => s.filter((x) => x.provider !== w.provider))}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-label="إغلاق"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
 
       {isGuest ? (
         <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-amber/40 bg-amber/10 p-4">

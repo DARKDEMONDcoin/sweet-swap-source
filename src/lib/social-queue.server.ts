@@ -35,6 +35,11 @@ function remoteRef(result: unknown): string | null {
   return null;
 }
 
+function videoOf(meta: unknown): string | null {
+  const v = meta && typeof meta === "object" ? (meta as { videoUrl?: unknown }).videoUrl : null;
+  return typeof v === "string" && /^https?:\/\//.test(v) ? v : null;
+}
+
 /** ينشر منشوراً واحداً ويحدّث صفّه — يُستدعى من الطابور ومن النشر الفوري. */
 export async function publishQueuedPost(admin: Admin, id: string): Promise<QueueReport> {
   const { data: post, error } = await admin
@@ -54,6 +59,7 @@ export async function publishQueuedPost(admin: Admin, id: string): Promise<Queue
       provider: post.provider,
       text: post.body,
       ...(post.image_url ? { imageUrl: post.image_url } : {}),
+      ...(videoOf(post.meta) ? { videoUrl: videoOf(post.meta)! } : {}),
     });
 
     await admin

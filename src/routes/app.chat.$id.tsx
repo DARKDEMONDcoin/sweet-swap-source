@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2, Fingerprint } from "lucide-react";
+import { Send, Settings2, Loader2, Check, Copy, Sparkles, ArrowUpLeft, Link2, Fingerprint, Share2, RefreshCw, Download, PenLine } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { AppIcon, appLabel } from "@/components/site/AppIcon";
@@ -14,6 +14,7 @@ import { SkillPalette } from "@/components/app/SkillPalette";
 import { Thinking } from "@/components/app/Thinking";
 import { Markdown } from "@/components/app/Markdown";
 import { PublishPanel } from "@/components/app/PublishPanel";
+import { requestedPublishTargets } from "@/lib/platforms";
 import { PublishToWordPress } from "@/components/app/PublishToWordPress";
 import { ActionPanel } from "@/components/app/ActionPanel";
 import { Portrait } from "@/components/site/Portrait";
@@ -88,6 +89,73 @@ function CopyButton({ text }: { text: string }) {
       {done ? "نُسخ" : "نسخ"}
     </button>
   );
+}
+
+/** أزرار أسفل رد الموظف: نسخ · مشاركة · تنزيل · تعديل في المربع · إعادة التوليد. */
+function MessageActions({
+  text,
+  onEdit,
+  onRegenerate,
+  disabled,
+}: {
+  text: string;
+  onEdit: () => void;
+  onRegenerate: (() => void) | null;
+  disabled: boolean;
+}) {
+  const [shared, setShared] = useState(false);
+  const btn =
+    "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-bold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50";
+  const share = async () => {
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShared(true);
+        setTimeout(() => setShared(false), 1600);
+      }
+    } catch {
+      /* أُلغيت المشاركة */
+    }
+  };
+  const download = () => {
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sahl-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <span className="flex flex-wrap items-center gap-0.5">
+      <CopyButton text={text} />
+      <button type="button" onClick={() => void share()} className={btn} aria-label="مشاركة">
+        <Share2 className="size-3" /> {shared ? "نُسخ للمشاركة" : "مشاركة"}
+      </button>
+      <button type="button" onClick={download} className={btn} aria-label="تنزيل">
+        <Download className="size-3" /> تنزيل
+      </button>
+      <button type="button" onClick={onEdit} className={btn} aria-label="تعديل يدوي">
+        <PenLine className="size-3" /> عدّل
+      </button>
+      {onRegenerate ? (
+        <button type="button" onClick={onRegenerate} disabled={disabled} className={btn} aria-label="إعادة التوليد">
+          <RefreshCw className="size-3" /> أعد التوليد
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+/** آخر رسالة كتبها المستخدم قبل رد الموظف — لنعرف ما طلبه بالضبط (المنصة مثلاً). */
+function lastUserBefore(arr: { role: string; body: string }[], idx: number): string {
+  for (let i = idx - 1; i >= 0; i -= 1) {
+    const m = arr[i];
+    if (m && m.role === "user") return m.body;
+  }
+  return "";
 }
 
 /** يقرّر إن كان رد سِراج منشوراً قابلاً للنشر (لا سؤالاً ولا شرحاً قصيراً). */
@@ -396,7 +464,8 @@ function ChatPage() {
                         <PublishPanel
                           workspaceId={workspace.id}
                           employeeId="sonny"
-                          channel="instagram"
+                          channel={requestedPublishTargets(lastUserBefore(arr, idx))[0] ?? "instagram"}
+                          request={lastUserBefore(arr, idx)}
                           body={m.body}
                         />
                       ) : null}
@@ -410,7 +479,19 @@ function ChatPage() {
                         <span>{timeOf(m.created_at)}</span>
                         {!isUser ? (
                           <span className="ms-auto opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                            <CopyButton text={body} />
+                            <MessageActions
+                              text={body}
+                              disabled={busy}
+                              onEdit={() => {
+                                setDraft(body);
+                                inputRef.current?.focus();
+                              }}
+                              onRegenerate={
+                                lastUserBefore(arr, idx)
+                                  ? () => submit(`${lastUserBefore(arr, idx)}\n\n(أعد صياغة الرد السابق بزاوية مختلفة وأقوى، وحافظ على نفس الطلب.)`)
+                                  : null
+                              }
+                            />
                           </span>
                         ) : null}
                       </div>

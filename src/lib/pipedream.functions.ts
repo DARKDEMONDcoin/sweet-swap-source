@@ -70,8 +70,18 @@ export const startPipedreamConnect = createServerFn({ method: "POST" })
       `https://pipedream.com/_static/connect.html?token=${encodeURIComponent(token.token)}`;
     const url = new URL(base);
     url.searchParams.set("app", app.slug);
-    url.searchParams.set("success_redirect_uri", `${origin}/app/integrations?pd=connected`);
+    url.searchParams.set("success_redirect_uri", `${origin}/app/integrations?pd=connected&provider=${data.provider}`);
     url.searchParams.set("error_redirect_uri", `${origin}/app/integrations?pd=failed`);
+
+    // تطبيق OAuth خاص بنا لهذه المنصة (مثلاً تطبيق ميتا المعتمد بصلاحيات النشر) إن كان مضبوطاً.
+    try {
+      const { getSecrets } = await import("./secrets.server");
+      const key = `PIPEDREAM_OAUTH_APP_${data.provider.toUpperCase().replace(/-/g, "_")}`;
+      const found: Record<string, string> = await getSecrets([key]);
+      if (found[key]) url.searchParams.set("oauthAppId", found[key]);
+    } catch {
+      /* الافتراضي: تطبيق الوسيط */
+    }
 
     return { url: url.toString(), app: app.slug, label: app.label };
   });
@@ -91,12 +101,28 @@ export const syncPipedreamAccounts = createServerFn({ method: "POST" })
     const slugToProvider = new Map(pipedreamApps.map((a) => [a.slug, a.provider]));
 
     const seen: string[] = [];
+    const warnings: { provider: string; message: string }[] = [];
     for (const account of accounts) {
       const slug =
         typeof account.app === "string" ? account.app : (account.app?.name_slug ?? "");
       const provider = slugToProvider.get(slug);
       if (!provider) continue;
       seen.push(provider);
+
+      // فيسبوك/إنستجرام: نتحقق فوراً أن الربط يملك صلاحية النشر، لا العرض فقط.
+      let scopeError: string | null = null;
+      if ((provider === "facebook" || provider === "instagram") && account.healthy !== false) {
+        try {
+          const { metaPermissions, META_PUBLISH_SCOPES, missingMetaScopesMessage } = await import("./social-inbox.server");
+          const granted = await metaPermissions(config, data.workspaceId, account.id);
+          const missing = META_PUBLISH_SCOPES.filter((s) => !granted.includes(s));
+          if (missing.length) scopeError = missingMetaScopesMessage(provider, missing);
+        } catch {
+          /* تعذّر الفحص — لا نعطّل الربط */
+        }
+      }
+      if (scopeError) warnings.push({ provider, message: scopeError });
+
       await admin.from("pipedream_accounts").upsert(
         {
           workspace_id: data.workspaceId,
@@ -106,6 +132,7 @@ export const syncPipedreamAccounts = createServerFn({ method: "POST" })
           account_name: account.name ?? null,
           status: account.healthy === false ? "error" : "connected",
           healthy: account.healthy !== false,
+          last_error: scopeError,
         },
         { onConflict: "workspace_id,provider,account_id" },
       );
@@ -135,7 +162,7 @@ export const syncPipedreamAccounts = createServerFn({ method: "POST" })
         .eq("provider", row.provider);
     }
 
-    return { ok: true as const, connected: seen };
+    return { ok: true as const, connected: seen, warnings };
   });
 
 /** فصل منصة مربوطة عبر Pipedream (يُلغى الحساب لدى Pipedream أيضاً). */

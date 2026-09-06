@@ -325,10 +325,16 @@ export async function generateCalendarPost(
   let imageUrl: string | null = post.image_url;
   if (opts.withImage && !imageUrl) {
     try {
-      const { ownedHeroImage } = await import("./image-gen.server");
-      const prompt =
-        (out?.image_prompt || meta.imageIdea || `Social media photo for ${ctx.ws.industry} brand ${ctx.ws.name}`) +
-        " Square 1:1 composition, premium commercial photography, Middle East context where relevant, no text, no letters, no logo, no watermark.";
+      const { ownedHeroImage, imageBrief } = await import("./image-gen.server");
+      // «مخرج صور»: الوصف يُبنى من عنوان المنشور ونصّه الفعلي، لا من فكرة عامة.
+      const brief = await imageBrief({
+        request: `${meta.title ?? ""} — ${meta.angle ?? ""}`.trim(),
+        title: meta.title ?? null,
+        body,
+        brand: { name: ctx.ws.name, industry: ctx.ws.industry, country: ctx.ws.country ?? null },
+        draft: out?.image_prompt || meta.imageIdea,
+      });
+      const prompt = `${brief} Square 1:1 composition, premium commercial photography.`;
       imageUrl = await ownedHeroImage(admin as unknown as Parameters<typeof ownedHeroImage>[0], workspaceId, prompt);
     } catch (e) {
       console.error("[calendar] image failed:", e);
