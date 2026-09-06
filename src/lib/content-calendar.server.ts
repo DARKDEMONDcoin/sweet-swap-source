@@ -132,6 +132,34 @@ function systemFor(ctx: Awaited<ReturnType<typeof workspaceContext>>, dialect: s
     .join("\n\n");
 }
 
+
+const COUNTRY_DIALECT: Record<string, string> = {
+  EG: "مصرية", SA: "خليجية", AE: "خليجية", KW: "خليجية", QA: "خليجية", BH: "خليجية", OM: "خليجية",
+  JO: "شامية", LB: "شامية", SY: "شامية", PS: "شامية", IQ: "عراقية", YE: "يمنية",
+  MA: "مغربية", DZ: "جزائرية", TN: "تونسية", LY: "ليبية", SD: "سودانية", MR: "موريتانية",
+  مصر: "مصرية", السعودية: "خليجية", الإمارات: "خليجية", الكويت: "خليجية", قطر: "خليجية", البحرين: "خليجية", عمان: "خليجية",
+  الأردن: "شامية", لبنان: "شامية", سوريا: "شامية", فلسطين: "شامية", العراق: "عراقية", اليمن: "يمنية",
+  المغرب: "مغربية", الجزائر: "جزائرية", تونس: "تونسية", ليبيا: "ليبية", السودان: "سودانية",
+};
+
+/**
+ * لهجة الكتابة الفعلية لمساحة العمل: اختيار المالك عند التسجيل ← لهجة موقعه المكتشفة ← دولته ← مصرية (سوق «سهل» الأول).
+ * لا نفترض الخليجية أبداً كقيمة صامتة.
+ */
+export async function resolveDialect(admin: Admin, workspaceId: string, explicit?: string | null): Promise<string> {
+  if (explicit && explicit.trim()) return explicit.trim();
+  const { data: ws } = await admin.from("workspaces").select("owner_id, country, profile").eq("id", workspaceId).maybeSingle();
+  if (!ws) return "مصرية";
+  const { data: prof } = await admin.from("profiles").select("dialect").eq("id", ws.owner_id).maybeSingle();
+  if (prof?.dialect?.trim()) return prof.dialect.trim();
+  const p = (ws as { profile?: { dialect?: string } | null }).profile;
+  if (p && typeof p === "object" && typeof p.dialect === "string" && p.dialect.trim()) return p.dialect.trim();
+  const c = (ws as { country?: string | null }).country?.trim();
+  if (c && COUNTRY_DIALECT[c.toUpperCase()]) return COUNTRY_DIALECT[c.toUpperCase()]!;
+  if (c && COUNTRY_DIALECT[c]) return COUNTRY_DIALECT[c]!;
+  return "مصرية";
+}
+
 /* ---------------- 1) الخطة ---------------- */
 
 export type PlanInput = {
@@ -140,7 +168,7 @@ export type PlanInput = {
   perDay: number; // 1..3
   providers: string[];
   topic?: string | undefined;
-  dialect: string;
+  dialect?: string | undefined;
   timezone: string;
   startAt?: string | undefined;
 };
@@ -186,7 +214,8 @@ export async function planCalendar(admin: Admin, input: PlanInput): Promise<{ cr
     .filter(Boolean)
     .slice(0, 15);
 
-  const system = systemFor(ctx, input.dialect, input.topic ?? ctx.ws.industry);
+  const dialect = await resolveDialect(admin, input.workspaceId, input.dialect);
+  const system = systemFor(ctx, dialect, input.topic ?? ctx.ws.industry);
   const user = [
     `خطّط ${slots.length} فكرة منشور لتقويم محتوى ${input.days} يوماً على: ${input.providers.join("، ")}.`,
     input.topic ? `المحور المطلوب من المالك: ${input.topic}` : "بلا محور محدد — استند إلى نشاط العلامة وجمهورها.",
@@ -259,7 +288,7 @@ export async function generateCalendarPost(
   admin: Admin,
   workspaceId: string,
   postId: string,
-  opts: { withImage: boolean; dialect: string },
+  opts: { withImage: boolean; dialect?: string | undefined },
 ): Promise<{ id: string; body: string; imageUrl: string | null }> {
   const { data: post } = await admin.from("social_posts").select("*").eq("id", postId).eq("workspace_id", workspaceId).maybeSingle();
   if (!post) throw new Error("المنشور غير موجود.");
@@ -267,7 +296,8 @@ export async function generateCalendarPost(
   const ctx = await workspaceContext(admin, workspaceId);
   const { freeChat } = await import("./nour-research.server");
 
-  const system = systemFor(ctx, opts.dialect, meta.title ?? post.body);
+  const dialect = await resolveDialect(admin, workspaceId, opts.dialect);
+  const system = systemFor(ctx, dialect, meta.title ?? post.body);
   const user = [
     `اكتب المنشور النهائي لمنصة ${post.provider}.`,
     `العنوان/الفكرة: ${meta.title ?? ""}`,
@@ -456,8 +486,9 @@ export async function learnFromPerformance(admin: Admin, workspaceId: string): P
 
 /* ---------------- 4) أفكار اليوم ---------------- */
 
-export async function dailyIdeas(admin: Admin, workspaceId: string, dialect = "خليجية"): Promise<{ title: string; hook: string; provider: string; prompt: string }[]> {
+export async function dailyIdeas(admin: Admin, workspaceId: string, dialectHint?: string | null): Promise<{ title: string; hook: string; provider: string; prompt: string }[]> {
   const ctx = await workspaceContext(admin, workspaceId);
+  const dialect = await resolveDialect(admin, workspaceId, dialectHint);
   const { freeChat } = await import("./nour-research.server");
   const day = new Date().toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" });
   const raw = await freeChat(
